@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Analytics } from '@vercel/analytics/react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
@@ -237,6 +238,7 @@ const App: React.FC = () => {
         <AuthInitializer>
           <AppRoutes />
           <NotificationContainer />
+          <Analytics />
         </AuthInitializer>
       </Router>
     </QueryClientProvider>

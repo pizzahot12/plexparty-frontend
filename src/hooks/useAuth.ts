@@ -12,6 +12,8 @@ export const useAuth = () => {
     logout,
     setUser,
     updateUser,
+    initSession,
+    updateProfile,
   } = useAuthStore();
 
   const checkAuth = useCallback(() => {
@@ -37,5 +39,7 @@ export const useAuth = () => {
     updateUser,
     checkAuth,
     getAuthHeaders,
+    initSession,
+    updateProfile,
   };
 };

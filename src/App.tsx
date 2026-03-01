@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/authStore';
 import { NotificationContainer } from '@/components/Layout/Notification';
 
 // Lazy load pages for better performance
@@ -30,12 +32,16 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <PageLoader />;
+  }
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
@@ -45,12 +51,16 @@ interface PublicRouteProps {
 }
 
 const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <PageLoader />;
+  }
+
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
@@ -184,12 +194,50 @@ const AppRoutes: React.FC = () => {
   );
 };
 
+// Auth initializer - restores session from Supabase on app load
+const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const initSession = useAuthStore((s) => s.initSession);
+  const setUser = useAuthStore((s) => s.setUser);
+  const setToken = useAuthStore((s) => s.setToken);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    // Restore session on mount
+    initSession().finally(() => setReady(true));
+
+    // Listen for auth state changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT' || !session) {
+          setUser(null);
+          setToken(null);
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          // Re-init to get fresh profile data
+          await initSession();
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [initSession, setUser, setToken]);
+
+  if (!ready) {
+    return <PageLoader />;
+  }
+
+  return <>{children}</>;
+};
+
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <AppRoutes />
-        <NotificationContainer />
+        <AuthInitializer>
+          <AppRoutes />
+          <NotificationContainer />
+        </AuthInitializer>
       </Router>
     </QueryClientProvider>
   );

@@ -44,11 +44,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
 
     if (!validate()) return;
 
-    const success = await login(email, password);
-    if (success) {
+    const result = await login(email, password);
+    if (result.success) {
       navigate('/');
     } else {
-      showError('Error de inicio de sesión', 'Email o contraseña incorrectos');
+      const msg = result.error === 'Invalid login credentials'
+        ? 'Email o contrasena incorrectos'
+        : result.error || 'Error de inicio de sesion';
+      showError('Error de inicio de sesion', msg);
     }
   };
 

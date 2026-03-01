@@ -1,54 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { supabase } from '@/lib/supabase';
 import type { User, AuthState } from '@/types';
 
 interface AuthStore extends AuthState {
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string, name: string) => Promise<boolean>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
   setLoading: (loading: boolean) => void;
   updateUser: (updates: Partial<User>) => void;
+  initSession: () => Promise<void>;
+  updateProfile: (updates: { name?: string; avatar?: string }) => Promise<boolean>;
 }
-
-// Mock API calls - replace with actual API integration
-const mockLogin = async (email: string, password: string): Promise<{ user: User; token: string } | null> => {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  if (email && password.length >= 6) {
-    return {
-      user: {
-        id: '1',
-        email,
-        name: email.split('@')[0],
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-        friendCode: 'ABC123',
-      },
-      token: 'mock-jwt-token-' + Date.now(),
-    };
-  }
-  return null;
-};
-
-const mockRegister = async (email: string, password: string, name: string): Promise<{ user: User; token: string } | null> => {
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  if (email && password.length >= 6 && name) {
-    return {
-      user: {
-        id: Date.now().toString(),
-        email,
-        name,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-        friendCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
-      },
-      token: 'mock-jwt-token-' + Date.now(),
-    };
-  }
-  return null;
-};
 
 export const useAuthStore = create<AuthStore>()(
   persist(
@@ -58,49 +23,158 @@ export const useAuthStore = create<AuthStore>()(
       isLoading: false,
       isAuthenticated: false,
 
-      login: async (email, password) => {
+      // Initialize session from Supabase on app load
+      initSession: async () => {
         set({ isLoading: true });
         try {
-          const result = await mockLogin(email, password);
-          if (result) {
+          const { data: { session } } = await supabase.auth.getSession();
+
+          if (session?.user) {
+            // Fetch profile from profiles table
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+
+            const user: User = {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: profile?.name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
+              avatar: profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`,
+              friendCode: profile?.friend_code || undefined,
+              createdAt: session.user.created_at,
+            };
+
             set({
-              user: result.user,
-              token: result.token,
+              user,
+              token: session.access_token,
               isAuthenticated: true,
               isLoading: false,
             });
-            return true;
+          } else {
+            set({
+              user: null,
+              token: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
           }
+        } catch (error) {
+          console.error('Error initializing session:', error);
+          set({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+        }
+      },
+
+      login: async (email, password) => {
+        set({ isLoading: true });
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (error) {
+            set({ isLoading: false });
+            return { success: false, error: error.message };
+          }
+
+          if (data.user && data.session) {
+            // Fetch profile
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', data.user.id)
+              .single();
+
+            const user: User = {
+              id: data.user.id,
+              email: data.user.email || '',
+              name: profile?.name || data.user.user_metadata?.name || data.user.email?.split('@')[0] || '',
+              avatar: profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+              friendCode: profile?.friend_code || undefined,
+              createdAt: data.user.created_at,
+            };
+
+            set({
+              user,
+              token: data.session.access_token,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+            return { success: true };
+          }
+
           set({ isLoading: false });
-          return false;
+          return { success: false, error: 'No se pudo iniciar sesion' };
         } catch (error) {
           set({ isLoading: false });
-          return false;
+          return { success: false, error: (error as Error).message };
         }
       },
 
       register: async (email, password, name) => {
         set({ isLoading: true });
         try {
-          const result = await mockRegister(email, password, name);
-          if (result) {
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { name },
+            },
+          });
+
+          if (error) {
+            set({ isLoading: false });
+            return { success: false, error: error.message };
+          }
+
+          if (data.user) {
+            // Generate friend code
+            const friendCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+            // Create profile in profiles table
+            await supabase.from('profiles').upsert({
+              id: data.user.id,
+              name,
+              email,
+              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+              friend_code: friendCode,
+            });
+
+            const user: User = {
+              id: data.user.id,
+              email: data.user.email || email,
+              name,
+              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+              friendCode,
+              createdAt: data.user.created_at,
+            };
+
             set({
-              user: result.user,
-              token: result.token,
-              isAuthenticated: true,
+              user,
+              token: data.session?.access_token || null,
+              isAuthenticated: !!data.session,
               isLoading: false,
             });
-            return true;
+            return { success: true };
           }
+
           set({ isLoading: false });
-          return false;
+          return { success: false, error: 'No se pudo crear la cuenta' };
         } catch (error) {
           set({ isLoading: false });
-          return false;
+          return { success: false, error: (error as Error).message };
         }
       },
 
-      logout: () => {
+      logout: async () => {
+        await supabase.auth.signOut();
         set({
           user: null,
           token: null,
@@ -127,10 +201,36 @@ export const useAuthStore = create<AuthStore>()(
           set({ user: { ...user, ...updates } });
         }
       },
+
+      updateProfile: async (updates) => {
+        const { user } = get();
+        if (!user) return false;
+
+        try {
+          const { error } = await supabase
+            .from('profiles')
+            .update(updates)
+            .eq('id', user.id);
+
+          if (error) {
+            console.error('Error updating profile:', error);
+            return false;
+          }
+
+          set({ user: { ...user, ...updates } });
+          return true;
+        } catch {
+          return false;
+        }
+      },
     }),
     {
       name: 'plexparty-auth',
-      partialize: (state) => ({ user: state.user, token: state.token, isAuthenticated: state.isAuthenticated }),
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );

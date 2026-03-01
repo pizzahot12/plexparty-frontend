@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 
 const ProfilePage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout, updateUser } = useAuth();
+  const { user, logout, updateUser, updateProfile } = useAuth();
   const { showSuccess, showError } = useNotifications();
   const { theme, toggleTheme } = useThemeStore();
 
@@ -34,14 +34,24 @@ const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'appearance'>('profile');
 
-  const handleSave = () => {
-    updateUser({ name, email });
-    showSuccess('Perfil actualizado', 'Tus cambios han sido guardados');
-    setIsEditing(false);
+  const handleSave = async () => {
+    if (updateProfile) {
+      const success = await updateProfile({ name });
+      if (success) {
+        showSuccess('Perfil actualizado', 'Tus cambios han sido guardados');
+        setIsEditing(false);
+      } else {
+        showError('Error', 'No se pudo actualizar el perfil');
+      }
+    } else {
+      updateUser({ name });
+      showSuccess('Perfil actualizado', 'Tus cambios han sido guardados');
+      setIsEditing(false);
+    }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     window.location.href = '/login';
   };
 

@@ -67,12 +67,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ className }) => {
 
     if (!validate()) return;
 
-    const success = await register(email, password, name);
-    if (success) {
+    const result = await register(email, password, name);
+    if (result.success) {
       showSuccess('Cuenta creada', 'Bienvenido a PlexParty');
       navigate('/');
     } else {
-      showError('Error al registrarse', 'Por favor intenta de nuevo');
+      const msg = result.error === 'User already registered'
+        ? 'Este email ya esta registrado'
+        : result.error || 'Error al registrarse';
+      showError('Error al registrarse', msg);
     }
   };
 

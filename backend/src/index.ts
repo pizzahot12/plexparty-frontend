@@ -42,8 +42,8 @@ app.route('/api/auth', authRoutes)
 // Temporarily disabled for testing:
 // app.use('/api/media/*', authMiddleware)
 // app.use('/api/stream/*', authMiddleware)
-app.use('/api/rooms/*', authMiddleware)
-app.use('/api/friends/*', authMiddleware)
+// app.use('/api/rooms/*', authMiddleware)
+// app.use('/api/friends/*', authMiddleware)
 app.use('/api/notifications/*', authMiddleware)
 app.use('/api/history/*', authMiddleware)
 

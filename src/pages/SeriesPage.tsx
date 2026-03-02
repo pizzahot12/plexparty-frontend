@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 const SeriesPage: React.FC = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { series, getByGenre } = useMedia();
+  const { series, getByGenre, loadMoreSeries, hasMoreSeries, isLoading } = useMedia();
   
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
@@ -162,9 +162,26 @@ const SeriesPage: React.FC = () => {
             </div>
           )}
 
-          {filteredSeries.length === 0 && (
+          {filteredSeries.length === 0 && !isLoading && (
             <div className="text-center py-20">
               <p className="text-white/50 text-lg">No se encontraron series</p>
+            </div>
+          )}
+
+          {isLoading && (
+            <div className="text-center py-8">
+              <div className="w-8 h-8 border-2 border-white/20 border-t-[#ff6b35] rounded-full animate-spin mx-auto" />
+            </div>
+          )}
+
+          {hasMoreSeries && !isLoading && !selectedGenre && filteredSeries.length > 0 && (
+            <div className="text-center py-8">
+              <button
+                onClick={() => loadMoreSeries()}
+                className="px-6 py-3 bg-[#ff6b35] text-white rounded-xl hover:bg-[#ff8555] transition-colors font-medium"
+              >
+                Cargar más series
+              </button>
             </div>
           )}
         </div>

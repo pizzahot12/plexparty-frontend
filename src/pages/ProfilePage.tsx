@@ -7,7 +7,7 @@ import { useThemeStore } from '@/stores/themeStore';
 import { Button } from '@/components/Common/Button';
 import { Input } from '@/components/Common/Input';
 import { Card } from '@/components/Common/Card';
-import { NotificationDemo } from '@/components/Layout/NotificationDemo';
+
 import { 
   User, 
   Mail, 
@@ -252,9 +252,7 @@ const ProfilePage: React.FC = () => {
 
               {activeTab === 'notifications' && (
                 <div className="space-y-6">
-                  <NotificationDemo />
-                  
-                  <Card className="p-6">
+                   <Card className="p-6">
                     <h3 className="text-white font-medium text-lg mb-4">Preferencias de notificaciones</h3>
                     <div className="space-y-4">
                       {[

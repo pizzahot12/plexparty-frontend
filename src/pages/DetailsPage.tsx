@@ -6,6 +6,7 @@ import { MovieDetails } from '@/components/Details/MovieDetails';
 import { SeriesDetails } from '@/components/Details/SeriesDetails';
 import { CreateRoomModal } from '@/components/Modals/CreateRoomModal';
 import { JoinRoomModal } from '@/components/Modals/JoinRoomModal';
+import { Loading } from '@/components/Common/Loading';
 import { useMedia } from '@/hooks/useMedia';
 
 
@@ -15,18 +16,27 @@ const DetailsPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const { getMediaById, setSelectedMedia } = useMedia();
-
-  const media = id ? getMediaById(id) : null;
+  const { selectedMedia, isLoading, loadMediaDetails, setSelectedMedia, getMediaById } = useMedia();
 
   useEffect(() => {
-    if (media) {
-      setSelectedMedia(media);
+    if (!id) return;
+    const cached = getMediaById(id);
+    if (cached) {
+      setSelectedMedia(cached);
     }
+    loadMediaDetails(id);
     return () => setSelectedMedia(null);
-  }, [media, setSelectedMedia]);
+  }, [id]);
 
-  if (!media) {
+  if (isLoading && !selectedMedia) {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+        <Loading text="Cargando detalles..." />
+      </div>
+    );
+  }
+
+  if (!selectedMedia) {
     return (
       <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
         <div className="text-center">
@@ -42,6 +52,8 @@ const DetailsPage: React.FC = () => {
     );
   }
 
+  const isSeriesType = selectedMedia.type === 'series';
+
   return (
     <div className="min-h-screen bg-[#1a1a1a]">
       <Header 
@@ -51,20 +63,19 @@ const DetailsPage: React.FC = () => {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <main className="lg:ml-20 xl:ml-64 pt-16">
-        {media.type === 'movie' ? (
-          <MovieDetails media={media} />
+        {isSeriesType ? (
+          <SeriesDetails media={selectedMedia} />
         ) : (
-          <SeriesDetails media={media} />
+          <MovieDetails media={selectedMedia} />
         )}
       </main>
 
-      {/* Modals */}
       <CreateRoomModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        mediaId={media.id}
-        mediaTitle={media.title}
-        mediaPoster={media.poster}
+        mediaId={selectedMedia.id}
+        mediaTitle={selectedMedia.title}
+        mediaPoster={selectedMedia.poster}
       />
 
       <JoinRoomModal

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMediaStore } from '@/stores/mediaStore';
 import { apiService } from '@/lib/api-service';
 import { useAuthStore } from '@/stores/authStore';
@@ -28,40 +28,62 @@ export const useMedia = () => {
     isFavorite,
   } = useMediaStore();
 
-  // Load real media data
-  const loadMovies = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiService.getMediaList('movies');
-      setMovies(data);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [setLoading, setError, setMovies]);
+  const [hasMoreMovies, setHasMoreMovies] = useState(true);
+  const [hasMoreSeries, setHasMoreSeries] = useState(true);
 
-  const loadSeries = useCallback(async () => {
+  const loadMovies = useCallback(async (skip = 0, limit = 50) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiService.getMediaList('series');
-      setSeries(data);
+      const data = await apiService.getMediaList('movies', skip, limit);
+      if (skip === 0) {
+        setMovies(data);
+      } else {
+        setMovies([...movies, ...data]);
+      }
+      setHasMoreMovies(data.length >= limit);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [setLoading, setError, setSeries]);
+  }, [setLoading, setError, setMovies, movies]);
+
+  const loadMoreMovies = useCallback(async () => {
+    if (!hasMoreMovies || isLoading) return;
+    await loadMovies(movies.length, 50);
+  }, [hasMoreMovies, isLoading, movies.length, loadMovies]);
+
+  const loadSeries = useCallback(async (skip = 0, limit = 50) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiService.getMediaList('series', skip, limit);
+      if (skip === 0) {
+        setSeries(data);
+      } else {
+        setSeries([...series, ...data]);
+      }
+      setHasMoreSeries(data.length >= limit);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [setLoading, setError, setSeries, series]);
+
+  const loadMoreSeries = useCallback(async () => {
+    if (!hasMoreSeries || isLoading) return;
+    await loadSeries(series.length, 50);
+  }, [hasMoreSeries, isLoading, series.length, loadSeries]);
 
   const loadTrending = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiService.getMediaList('all');
-      const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, 10);
-      setTrending(shuffled);
+      const data = await apiService.getMediaList('all', 0, 10);
+      const sorted = [...data].sort((a, b) => b.rating - a.rating);
+      setTrending(sorted);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -85,8 +107,8 @@ export const useMedia = () => {
       
       const mediaData = (await Promise.all(mediaPromises)).filter((m): m is NonNullable<Awaited<ReturnType<typeof apiService.getMediaDetails>>> => m !== null);
       setContinueWatching(mediaData);
-    } catch (err) {
-      console.error('Error loading continue watching:', err);
+    } catch {
+      // Silent fail
     }
   }, [setContinueWatching]);
 
@@ -112,8 +134,8 @@ export const useMedia = () => {
     if (!isAuthenticated) return;
     if (hasFetchedRef.current && movies.length > 0) return;
     hasFetchedRef.current = true;
-    loadMovies();
-    loadSeries();
+    loadMovies(0, 50);
+    loadSeries(0, 50);
     loadTrending();
     loadContinueWatching();
   }, [isAuthenticated]);
@@ -152,7 +174,6 @@ export const useMedia = () => {
   }, [isFavorite, addToFavorites, removeFromFavorites]);
 
   return {
-    // Data
     movies,
     series,
     trending,
@@ -162,12 +183,15 @@ export const useMedia = () => {
     isLoading,
     error,
     allMedia,
-    
-    // Actions
+    hasMoreMovies,
+    hasMoreSeries,
+
     setMovies,
     setSeries,
     loadMovies,
     loadSeries,
+    loadMoreMovies,
+    loadMoreSeries,
     loadTrending,
     loadContinueWatching,
     loadMediaDetails,
@@ -175,8 +199,7 @@ export const useMedia = () => {
     addToFavorites,
     removeFromFavorites,
     toggleFavorite,
-    
-    // Getters
+
     getMediaById,
     getMediaByType,
     getFavoritesList,

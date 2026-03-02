@@ -46,15 +46,11 @@ const RoomsPage: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'mine' | 'public'>('all');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch rooms from API
   const fetchRooms = async () => {
     setIsLoading(true);
     try {
-      // For now, we'll use a mock approach since the backend might not have an endpoint to list all rooms
-      // In a real scenario, you'd have an endpoint like /api/rooms/list
-      // For now, we'll show empty state or allow users to join by code
       setRooms([]);
-    } catch (error) {
+    } catch {
       showError('Error', 'No se pudieron cargar las salas');
     } finally {
       setIsLoading(false);

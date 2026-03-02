@@ -9,8 +9,25 @@ import logger from '../utils/logger.js'
 const JELLYFIN_URL = process.env.JELLYFIN_URL || ''
 const JELLYFIN_API_KEY = process.env.JELLYFIN_API_KEY || ''
 
+let jellyfinUserId = ''
+
 if (!JELLYFIN_URL || !JELLYFIN_API_KEY) {
   logger.warn('JELLYFIN_URL or JELLYFIN_API_KEY not configured')
+}
+
+async function getJellyfinUserId(): Promise<string> {
+  if (jellyfinUserId) return jellyfinUserId
+
+  const response = await fetch(
+    `${JELLYFIN_URL}/Users?api_key=${JELLYFIN_API_KEY}`
+  )
+  if (!response.ok) throw new Error('Failed to get Jellyfin users')
+
+  const users = await response.json() as Array<{ Id: string; Policy: { IsAdministrator: boolean } }>
+  const admin = users.find((u) => u.Policy.IsAdministrator)
+  jellyfinUserId = admin ? admin.Id : users[0].Id
+  logger.info(`Jellyfin userId resolved: ${jellyfinUserId}`)
+  return jellyfinUserId
 }
 
 async function jellyfinFetch<T>(path: string): Promise<T> {
@@ -61,18 +78,20 @@ export async function getMediaList(
   skip: number = 0,
   limit: number = 20
 ): Promise<MediaItem[]> {
+  const userId = await getJellyfinUserId()
   const itemTypes = type === 'series' ? 'Series' : type === 'all' ? 'Movie,Series' : 'Movie'
 
   const data = await jellyfinFetch<{ Items: JellyfinItem[] }>(
-    `/Items?IncludeItemTypes=${itemTypes}&Recursive=true&SortBy=SortName&SortOrder=Ascending&StartIndex=${skip}&Limit=${limit}&Fields=Overview,Genres`
+    `/Users/${userId}/Items?IncludeItemTypes=${itemTypes}&Recursive=true&SortBy=SortName&SortOrder=Ascending&StartIndex=${skip}&Limit=${limit}&Fields=Overview,Genres`
   )
 
   return data.Items.map(mapJellyfinToMedia)
 }
 
 export async function getMediaDetails(mediaId: string): Promise<MediaDetails> {
+  const userId = await getJellyfinUserId()
   const item = await jellyfinFetch<JellyfinItem>(
-    `/Items/${mediaId}?Fields=Overview,Genres,People,MediaStreams`
+    `/Users/${userId}/Items/${mediaId}?Fields=Overview,Genres,People,MediaStreams`
   )
 
   const base = mapJellyfinToMedia(item)

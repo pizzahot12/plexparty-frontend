@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import type { Media } from '@/types';
+import type { Media, Season, Episode } from '@/types';
 import { useMedia } from '@/hooks/useMedia';
 import { useRooms } from '@/hooks/useRooms';
 import { useNotifications } from '@/hooks/useNotifications';
+import { apiService } from '@/lib/api-service';
 import { Button } from '@/components/Common/Button';
 import { EpisodeSelector } from './EpisodeSelector';
 import { 
@@ -30,11 +31,83 @@ export const SeriesDetails: React.FC<SeriesDetailsProps> = ({ media, className }
   const { createRoom } = useRooms();
   const { showSuccess, showError } = useNotifications();
 
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [selectedSeason, setSelectedSeason] = useState(0);
   const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
+  const [loadingSeasons, setLoadingSeasons] = useState(false);
+  const [loadingEpisodes, setLoadingEpisodes] = useState(false);
+
+  useEffect(() => {
+    const fetchSeasons = async () => {
+      setLoadingSeasons(true);
+      try {
+        const data = await apiService.getSeasons(media.id);
+        const mappedSeasons: Season[] = data.map((s) => ({
+          id: s.id,
+          number: s.number,
+          title: s.name,
+          episodes: [],
+        }));
+        setSeasons(mappedSeasons);
+        
+        if (mappedSeasons.length > 0) {
+          const firstSeasonId = mappedSeasons[0].id;
+          const episodesData = await apiService.getEpisodes(media.id, firstSeasonId);
+          setEpisodes(
+            episodesData.map((e) => ({
+              id: e.id,
+              number: e.episode,
+              title: e.title,
+              duration: e.duration,
+              synopsis: e.synopsis,
+              thumbnail: e.poster,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('Error fetching seasons:', err);
+      } finally {
+        setLoadingSeasons(false);
+      }
+    };
+
+    if (media.type === 'series') {
+      fetchSeasons();
+    }
+  }, [media.id, media.type]);
+
+  useEffect(() => {
+    const fetchEpisodes = async () => {
+      if (seasons.length === 0) return;
+      
+      const seasonId = seasons[selectedSeason]?.id;
+      if (!seasonId) return;
+
+      setLoadingEpisodes(true);
+      try {
+        const data = await apiService.getEpisodes(media.id, seasonId);
+        setEpisodes(
+          data.map((e) => ({
+            id: e.id,
+            number: e.episode,
+            title: e.title,
+            duration: e.duration,
+            synopsis: e.synopsis,
+            thumbnail: e.poster,
+          }))
+        );
+      } catch (err) {
+        console.error('Error fetching episodes:', err);
+      } finally {
+        setLoadingEpisodes(false);
+      }
+    };
+
+    fetchEpisodes();
+  }, [selectedSeason, seasons, media.id]);
 
   const favorite = isFavorite(media.id);
-  const seasons = media.seasons || [];
   const currentSeason = seasons[selectedSeason];
 
   const handleCreateRoom = async () => {
@@ -57,7 +130,7 @@ export const SeriesDetails: React.FC<SeriesDetailsProps> = ({ media, className }
     showSuccess('Episodio seleccionado', `Temporada ${seasonIndex + 1}, Episodio ${episodeIndex + 1}`);
   };
 
-  const totalEpisodes = seasons.reduce((acc, season) => acc + season.episodes.length, 0);
+  const totalEpisodes = episodes.length;
 
   return (
     <div className={cn('relative min-h-screen', className)}>
@@ -105,10 +178,16 @@ export const SeriesDetails: React.FC<SeriesDetailsProps> = ({ media, className }
                 <span className="w-1 h-1 bg-white/40 rounded-full" />
                 <span className="flex items-center gap-1 text-white/70">
                   <Tv className="w-4 h-4" />
-                  {seasons.length} {seasons.length === 1 ? 'Temporada' : 'Temporadas'}
+                  {loadingSeasons ? (
+                    <span className="animate-pulse">Cargando...</span>
+                  ) : (
+                    <>
+                      {seasons.length} {seasons.length === 1 ? 'Temporada' : 'Temporadas'}
+                    </>
+                  )}
                 </span>
                 <span className="w-1 h-1 bg-white/40 rounded-full" />
-                <span className="text-white/70">{totalEpisodes} Episodios</span>
+                <span className="text-white/70">{loadingEpisodes ? '...' : `${totalEpisodes} Episodios`}</span>
                 <span className="w-1 h-1 bg-white/40 rounded-full" />
                 <span className="px-2 py-0.5 bg-[#ff6b35]/20 text-[#ff6b35] rounded text-xs font-medium">
                   Serie
@@ -243,7 +322,7 @@ export const SeriesDetails: React.FC<SeriesDetailsProps> = ({ media, className }
               </div>
 
               <EpisodeSelector
-                season={currentSeason}
+                season={{ ...currentSeason, episodes }}
                 onEpisodeSelect={(episodeIndex) => handleEpisodeSelect(selectedSeason, episodeIndex)}
               />
             </div>

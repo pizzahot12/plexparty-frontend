@@ -23,13 +23,10 @@ export function startTranscode(
   stopTranscode(sessionId)
 
   const args = [
+    '-user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    '-re',
     '-i', inputUrl,
-    '-vf', `scale=${settings.scale}`,
-    '-b:v', settings.bitrate,
-    '-c:v', 'libx264',
-    '-preset', 'veryfast',
-    '-c:a', 'aac',
-    '-b:a', '128k',
+    '-c', 'copy',
     '-f', 'mpegts',
     '-movflags', 'frag_keyframe+empty_moov',
     'pipe:1',

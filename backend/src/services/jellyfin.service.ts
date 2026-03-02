@@ -42,16 +42,22 @@ async function jellyfinFetch<T>(path: string): Promise<T> {
   const timeout = setTimeout(() => controller.abort(), 15000)
 
   try {
+    logger.debug(`Jellyfin fetch: ${path}`)
     const response = await fetch(`${url}${separator}api_key=${JELLYFIN_API_KEY}`, {
       signal: controller.signal,
     })
 
     if (!response.ok) {
-      logger.error(`Jellyfin API error: ${response.status} ${response.statusText} for ${path}`)
+      const errorText = await response.text()
+      logger.error(`Jellyfin API error: ${response.status} ${response.statusText} for ${path} - ${errorText}`)
       throw new Error(`Jellyfin API error: ${response.status}`)
     }
 
     return response.json() as Promise<T>
+  } catch (err) {
+    const error = err as Error
+    logger.error(`Jellyfin fetch failed for ${path}: ${error.message}`)
+    throw err
   } finally {
     clearTimeout(timeout)
   }
@@ -88,13 +94,21 @@ export async function getMediaList(
   limit: number = 20
 ): Promise<MediaItem[]> {
   const userId = await getJellyfinUserId()
-  const itemTypes = type === 'series' ? 'Series' : type === 'all' ? 'Movie,Series' : 'Movie'
-
+  
+  // Get movies and series separately to avoid issues
+  if (type === 'series') {
+    const data = await jellyfinFetch<{ Items: JellyfinItem[] }>(
+      `/Users/${userId}/Items?ParentId=5ddaa59a73205234890fdcfc683e14ed&Recursive=true&StartIndex=${skip}&Limit=${limit}`
+    )
+    return data.Items.filter(item => item.Type === 'Series').map(mapJellyfinToMedia)
+  }
+  
+  // For movies, use the Movies folder
   const data = await jellyfinFetch<{ Items: JellyfinItem[] }>(
-    `/Users/${userId}/Items?IncludeItemTypes=${itemTypes}&Recursive=true&SortBy=SortName&SortOrder=Ascending&StartIndex=${skip}&Limit=${limit}&Fields=Overview,Genres`
+    `/Users/${userId}/Items?ParentId=ed2a25286c558a96e1424971742ca250&Recursive=true&StartIndex=${skip}&Limit=${limit}`
   )
-
-  return data.Items.map(mapJellyfinToMedia)
+  
+  return data.Items.filter(item => item.Type === 'Movie').map(mapJellyfinToMedia)
 }
 
 export async function getMediaDetails(mediaId: string): Promise<MediaDetails> {

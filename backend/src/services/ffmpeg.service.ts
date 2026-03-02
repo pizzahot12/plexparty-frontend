@@ -4,6 +4,11 @@ import { startTranscode, stopTranscode } from '../lib/ffmpeg.js'
 import * as jellyfinService from './jellyfin.service.js'
 import logger from '../utils/logger.js'
 
+export interface StreamOptions {
+  audioStreamIndex?: number
+  subtitleStreamIndex?: number
+}
+
 export interface TranscodeResult {
   stream: Readable
   sessionId: string
@@ -12,13 +17,15 @@ export interface TranscodeResult {
 export async function getTranscodedStream(
   mediaId: string,
   quality: Quality,
-  userId: string
+  userId: string,
+  options: StreamOptions = {}
 ): Promise<TranscodeResult> {
-  // Session ID unique per user + media
   const sessionId = `${userId}-${mediaId}`
 
-  // Get the raw stream URL from Jellyfin
-  const inputUrl = jellyfinService.getStreamUrl(mediaId)
+  const inputUrl = jellyfinService.getStreamUrl(mediaId, {
+    audioStreamIndex: options.audioStreamIndex,
+    subtitleStreamIndex: options.subtitleStreamIndex,
+  })
 
   logger.info(`Starting transcode: media=${mediaId} quality=${quality} session=${sessionId}`)
 

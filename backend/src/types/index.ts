@@ -168,6 +168,11 @@ export interface JellyfinItem {
   Genres?: string[]
   People?: JellyfinPerson[]
   MediaStreams?: JellyfinMediaStream[]
+  IndexNumber?: number
+  ParentIndexNumber?: number
+  SeriesId?: string
+  SeasonId?: string
+  Type?: string
 }
 
 export interface JellyfinPerson {
@@ -181,6 +186,9 @@ export interface JellyfinMediaStream {
   Language?: string
   DisplayTitle?: string
   Index: number
+  Codec?: string
+  IsExternal?: boolean
+  IsDefault?: boolean
 }
 
 // --- HONO CONTEXT ---

@@ -8,6 +8,8 @@ import logger from '../utils/logger.js'
 export async function getStream(c: Context<{ Variables: AppVariables }>) {
   const mediaId = c.req.param('mediaId')
   const qualityInput = c.req.query('quality') || '720p'
+  const audioIndex = c.req.query('audioIndex')
+  const subtitleIndex = c.req.query('subtitleIndex')
   const userId = c.get('userId')
 
   const parsed = qualitySchema.safeParse(qualityInput)
@@ -18,13 +20,18 @@ export async function getStream(c: Context<{ Variables: AppVariables }>) {
   const quality: Quality = parsed.data
 
   try {
+    const streamOptions = {
+      audioStreamIndex: audioIndex ? parseInt(audioIndex, 10) : undefined,
+      subtitleStreamIndex: subtitleIndex ? parseInt(subtitleIndex, 10) : undefined,
+    }
+
     const { stream: videoStream, sessionId } = await ffmpegService.getTranscodedStream(
       mediaId,
       quality,
-      userId
+      userId,
+      streamOptions
     )
 
-    // Stream the transcoded video
     c.header('Content-Type', 'video/mp2t')
     c.header('Cache-Control', 'no-cache')
     c.header('Transfer-Encoding', 'chunked')
@@ -36,7 +43,6 @@ export async function getStream(c: Context<{ Variables: AppVariables }>) {
         try {
           await s.write(chunk)
         } catch {
-          // Client disconnected
           ffmpegService.stopStream(userId, mediaId)
         }
       })
@@ -49,7 +55,6 @@ export async function getStream(c: Context<{ Variables: AppVariables }>) {
         logger.error(`Stream error: session=${sessionId}`, err.message)
       })
 
-      // Wait for the stream to finish
       await new Promise<void>((resolve) => {
         reader.on('end', resolve)
         reader.on('error', resolve)

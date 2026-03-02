@@ -267,10 +267,83 @@ export class ApiService {
     }>(`/history/progress/${mediaId}`);
   }
 
+  // Series endpoints
+  async getSeasons(seriesId: string) {
+    return this.request<Array<{
+      id: string;
+      name: string;
+      number: number;
+    }>>(`/media/${seriesId}/seasons`);
+  }
+
+  async getEpisodes(seriesId: string, seasonId?: string) {
+    const params = seasonId ? `?seasonId=${seasonId}` : '';
+    return this.request<Array<{
+      id: string;
+      title: string;
+      season: number;
+      episode: number;
+      synopsis: string;
+      duration: number;
+      poster: string;
+    }>>(`/media/${seriesId}/episodes${params}`);
+  }
+
+  // Media streams (subtitles & audio tracks)
+  async getMediaStreams(mediaId: string) {
+    return this.request<{
+      subtitles: Array<{
+        index: number;
+        language: string;
+        displayTitle: string;
+        codec: string;
+        isExternal: boolean;
+      }>;
+      audio: Array<{
+        index: number;
+        language: string;
+        displayTitle: string;
+        codec: string;
+        isDefault: boolean;
+      }>;
+    }>(`/media/${mediaId}/streams`);
+  }
+
+  // Jellyfin status
+  async getJellyfinStatus() {
+    return this.request<{
+      connected: boolean;
+      configured: boolean;
+      serverName?: string;
+      version?: string;
+      error?: string;
+    }>('/media/status');
+  }
+
+  // Image proxy (avoids exposing Jellyfin API key)
+  getImageUrl(itemId: string, type: 'Primary' | 'Backdrop' = 'Primary', maxWidth?: number): string {
+    const params = maxWidth ? `?maxWidth=${maxWidth}` : '';
+    return `${this.baseUrl}/media/image/${itemId}/${type}${params}`;
+  }
+
   // Stream endpoint
-  getStreamUrl(mediaId: string, quality: string = '720p'): string {
+  getStreamUrl(
+    mediaId: string,
+    quality: string = '720p',
+    options: { audioIndex?: number; subtitleIndex?: number } = {}
+  ): string {
     const token = this.getToken();
-    return `${this.baseUrl}/stream/${mediaId}?quality=${quality}&token=${token || ''}`;
+    const params = new URLSearchParams({
+      quality,
+      token: token || '',
+    });
+    if (options.audioIndex !== undefined) {
+      params.set('audioIndex', String(options.audioIndex));
+    }
+    if (options.subtitleIndex !== undefined) {
+      params.set('subtitleIndex', String(options.subtitleIndex));
+    }
+    return `${this.baseUrl}/stream/${mediaId}?${params}`;
   }
 }
 

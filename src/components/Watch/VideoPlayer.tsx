@@ -430,8 +430,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     );
   }
 
-  // ── Settings panel ────────────────────────────────────────────────────────────
-  const SettingsPanel = () => (
+  // ── Settings panel JSX (inline to prevent remount flashing) ──────────────────
+  const settingsPanelContent = (
     <div className="absolute bottom-16 right-4 w-56 bg-[#1e1e1e]/95 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden shadow-2xl z-30">
 
       {/* ── main menu ── */}
@@ -659,7 +659,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* ── Settings panel (outside the faded overlay so always clickable) ── */}
       {showSettings && (
         <div className="pointer-events-auto">
-          <SettingsPanel />
+          {settingsPanelContent}
         </div>
       )}
     </div>

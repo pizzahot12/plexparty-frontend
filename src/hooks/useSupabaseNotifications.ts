@@ -37,7 +37,6 @@ export function useSupabaseNotifications() {
                     }
 
                     addNotification({
-                        id: newNotif.id,
                         type,
                         title: data.title || type,
                         message: data.message || '',

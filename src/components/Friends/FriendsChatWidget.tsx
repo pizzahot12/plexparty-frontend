@@ -5,12 +5,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useFriends } from '@/hooks/useFriends';
 import { useFriendChatStore } from '@/stores/friendChatStore';
-import { Send, Smile } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 export const FriendsChatWidget: React.FC = () => {
     const { user } = useAuth();
     const { friends } = useFriends();
-    const { showSuccess, showError } = useNotifications();
+    const { showSuccess } = useNotifications();
     const { activeChatFriendId, closeChat, messagesByFriend, addMessage } = useFriendChatStore();
     const [inputText, setInputText] = useState('');
     const navigate = useNavigate();

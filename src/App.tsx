@@ -215,6 +215,7 @@ const App: React.FC = () => {
       <Router>
         <AuthInitializer>
           <AppRoutes />
+          <FriendsChatWidget />
           <NotificationContainer />
         </AuthInitializer>
       </Router>

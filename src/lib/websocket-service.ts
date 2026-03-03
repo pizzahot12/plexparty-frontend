@@ -1,7 +1,7 @@
 import { WS_BASE_URL } from '@/lib/constants';
 import { useAuthStore } from '@/stores/authStore';
 
-type WebSocketEventType = 
+type WebSocketEventType =
   | 'connection_established'
   | 'user_joined'
   | 'user_left'
@@ -53,7 +53,7 @@ export class WebSocketService {
   connect(roomId: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const token = useAuthStore.getState().token;
-      
+
       if (!token) {
         reject(new Error('No authentication token available'));
         return;
@@ -61,7 +61,7 @@ export class WebSocketService {
 
       this.roomId = roomId;
       const wsUrl = `${WS_BASE_URL}/ws/rooms/${roomId}?token=${token}`;
-      
+
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
@@ -97,13 +97,21 @@ export class WebSocketService {
       this.reconnectTimer = null;
     }
 
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
-
     this.roomId = null;
-    this.reconnectAttempts = 0;
+    this.reconnectAttempts = this.maxReconnectAttempts; // prevent reconnect
+
+    if (this.ws) {
+      const ws = this.ws;
+      this.ws = null;
+      // Only close if already open or connecting — swallow the race condition error
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      } else if (ws.readyState === WebSocket.CONNECTING) {
+        // Let it finish connecting, then close it. Suppress errors.
+        ws.onopen = () => ws.close();
+        ws.onerror = () => { };
+      }
+    }
   }
 
   private attemptReconnect(): void {

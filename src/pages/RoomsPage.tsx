@@ -7,10 +7,10 @@ import { Button } from '@/components/Common/Button';
 import { cn } from '@/lib/utils';
 import { apiService } from '@/lib/api-service';
 import { useAuthStore } from '@/stores/authStore';
-import { 
-  Play, 
-  Users, 
-  X, 
+import {
+  Play,
+  Users,
+  X,
   Power,
   DoorOpen,
   Crown,
@@ -49,7 +49,8 @@ const RoomsPage: React.FC = () => {
   const fetchRooms = async () => {
     setIsLoading(true);
     try {
-      setRooms([]);
+      const data = await apiService.getRooms();
+      setRooms(data);
     } catch {
       showError('Error', 'No se pudieron cargar las salas');
     } finally {
@@ -102,8 +103,8 @@ const RoomsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#1a1a1a]">
-      <Header 
-        onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
+      <Header
+        onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         isSidebarOpen={sidebarOpen}
       />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -120,6 +121,15 @@ const RoomsPage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Add Room button */}
+              <button
+                onClick={() => navigate('/movies')}
+                className="flex items-center gap-2 px-4 py-2 bg-[#ff6b35] text-white rounded-xl hover:bg-[#ff8555] transition-colors"
+              >
+                <Play className="w-4 h-4 fill-white" />
+                <span className="hidden sm:inline text-sm font-medium">Crear sala</span>
+              </button>
+
               {/* Refresh button */}
               <button
                 onClick={fetchRooms}
@@ -218,7 +228,7 @@ const RoomsPage: React.FC = () => {
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent" />
-                    
+
                     {/* Privacy badge */}
                     <div className="absolute top-3 left-3">
                       <span className={cn(
@@ -303,7 +313,7 @@ const RoomsPage: React.FC = () => {
                         <Play className="w-4 h-4 fill-white" />
                         Unirse
                       </button>
-                      
+
                       {room.isHost && (
                         <button
                           onClick={() => handleCloseRoom(room.id)}
@@ -333,7 +343,7 @@ const JoinRoomByCode: React.FC<{ onJoin: (code: string) => void }> = ({ onJoin }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (code.trim().length !== 6) return;
-    
+
     setIsJoining(true);
     await onJoin(code.trim().toUpperCase());
     setIsJoining(false);

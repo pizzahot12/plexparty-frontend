@@ -136,6 +136,10 @@ export class ApiService {
     });
   }
 
+  async getRooms() {
+    return this.request<any[]>('/rooms');
+  }
+
   async getRoomByCode(code: string) {
     return this.request<{
       roomId: string;

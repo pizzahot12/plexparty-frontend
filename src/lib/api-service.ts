@@ -140,6 +140,13 @@ export class ApiService {
     return this.request<any[]>('/rooms');
   }
 
+  async updateRoomPrivacy(roomId: string, isPrivate: boolean) {
+    return this.request<{ success: boolean }>(`/rooms/${roomId}/privacy`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isPrivate }),
+    });
+  }
+
   async getRoomByCode(code: string) {
     return this.request<{
       roomId: string;
@@ -160,6 +167,13 @@ export class ApiService {
   async kickUser(roomId: string, userId: string) {
     return this.request<{ success: boolean }>(`/rooms/${roomId}/kick/${userId}`, {
       method: 'POST',
+    });
+  }
+
+  async inviteToRoom(roomId: string, userId: string) {
+    return this.request<{ success: boolean }>(`/rooms/${roomId}/invite`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
     });
   }
 

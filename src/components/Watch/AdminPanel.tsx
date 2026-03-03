@@ -4,6 +4,7 @@ import { useRooms } from '@/hooks/useRooms';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useFriends } from '@/hooks/useFriends';
+import { apiService } from '@/lib/api-service';
 import {
   Crown,
   UserX,
@@ -39,17 +40,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className }) => {
     showSuccess('Usuario expulsado', `${participantName} ha sido expulsado de la sala`);
   };
 
-  const handleInvite = (_friendId: string, friendName: string) => {
-    showSuccess('Invitación enviada', `Invitación enviada a ${friendName}`);
+  const handleInvite = async (friendId: string, friendName: string) => {
+    try {
+      if (!room) return;
+      await apiService.inviteToRoom(room.id, friendId);
+      showSuccess('Invitación enviada', `Invitación enviada a ${friendName}`);
+    } catch {
+      showError('Error', 'No se pudo enviar la invitación');
+    }
     setShowInviteMenu(false);
   };
 
-  const togglePrivacy = () => {
-    setIsPrivate(!isPrivate);
-    showSuccess(
-      isPrivate ? 'Sala pública' : 'Sala privada',
-      isPrivate ? 'Cualquiera puede unirse' : 'Solo con invitación'
-    );
+  const togglePrivacy = async () => {
+    try {
+      if (!room) return;
+      await apiService.updateRoomPrivacy(room.id, !isPrivate);
+      setIsPrivate(!isPrivate);
+      showSuccess(
+        !isPrivate ? 'Sala privada' : 'Sala pública',
+        !isPrivate ? 'Solo con invitación' : 'Cualquiera puede unirse'
+      );
+    } catch {
+      showError('Error', 'No se pudo actualizar la privacidad');
+    }
   };
 
   const onlineFriends = friends.filter((f) => f.isOnline && !room?.participants.some((p: { id: string }) => p.id === f.id));
@@ -188,18 +201,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className }) => {
         <div className="px-4 pb-4">
           <div className="p-4 bg-white/5 rounded-xl space-y-4">
             <div>
-              <label className="text-white/70 text-sm">Calidad máxima</label>
-              <select className="w-full mt-1.5 bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6b35]/50">
-                <option value="auto">Auto</option>
-                <option value="480p">480p</option>
-                <option value="720p">720p</option>
-                <option value="1080p">1080p</option>
-                <option value="4k">4K</option>
-              </select>
-            </div>
-            <div>
               <label className="text-white/70 text-sm">Sincronización</label>
-              <select className="w-full mt-1.5 bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6b35]/50">
+              <select
+                className="w-full mt-1.5 bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6b35]/50"
+                onChange={(e) => {
+                  showSuccess('Configuración guardada', `Sincronización cambiada a modo ${e.target.value === 'strict' ? 'estricto' : 'relajado'}`);
+                }}
+              >
                 <option value="strict">Estricta (todos ven lo mismo)</option>
                 <option value="relaxed">Relajada (cada uno controla)</option>
               </select>

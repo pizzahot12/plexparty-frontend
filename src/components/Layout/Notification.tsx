@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { useNotificationStore } from '@/stores/notificationStore';
+import { useSupabaseNotifications } from '@/hooks/useSupabaseNotifications';
 import { X, Check, AlertCircle, Info, UserPlus, CheckCircle } from 'lucide-react';
 
 const iconMap = {
@@ -20,17 +21,20 @@ const colorMap = {
 };
 
 export const NotificationContainer: React.FC = () => {
-  const { notifications, removeNotification, markAsRead } = useNotificationStore();
+  const { notifications, dismissNotification, markAsRead } = useNotificationStore();
+  useSupabaseNotifications();
 
-  if (notifications.length === 0) return null;
+  const visibleNotifications = notifications.filter(n => !n.dismissed);
+
+  if (visibleNotifications.length === 0) return null;
 
   return (
     <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm w-full">
-      {notifications.map((notification) => (
+      {visibleNotifications.map((notification) => (
         <NotificationItem
           key={notification.id}
           notification={notification}
-          onClose={() => removeNotification(notification.id)}
+          onClose={() => dismissNotification(notification.id)}
           onAction={() => markAsRead(notification.id)}
         />
       ))}

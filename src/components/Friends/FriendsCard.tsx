@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import type { Friend } from '@/types';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useFriendChatStore } from '@/stores/friendChatStore';
 import { Play, MessageSquare, MoreVertical, Film, UserX, Ban, Volume2 } from 'lucide-react';
 
 interface FriendsCardProps {
@@ -20,8 +21,8 @@ export const FriendsCard: React.FC<FriendsCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const { showInfo, showSuccess } = useNotifications();
+  const { openChat } = useFriendChatStore();
   const [showMenu, setShowMenu] = useState(false);
-  const [showChat, setShowChat] = useState(false);
 
   const handleJoinRoom = () => {
     if (friend.roomCode) {
@@ -30,10 +31,7 @@ export const FriendsCard: React.FC<FriendsCardProps> = ({
   };
 
   const handleMessage = () => {
-    setShowChat(!showChat);
-    if (!showChat) {
-      showInfo('Chat abierto', `Ahora puedes chatear con ${friend.name}`);
-    }
+    openChat(friend.id);
   };
 
   const handleRemove = () => {
@@ -88,7 +86,7 @@ export const FriendsCard: React.FC<FriendsCardProps> = ({
 
           <div className="flex-1 min-w-0 pr-6">
             <h4 className="text-white font-medium truncate">{friend.name}</h4>
-            
+
             {friend.isWatching && friend.currentMedia ? (
               <div className="mt-1">
                 <p className="text-[#ff6b35] text-sm flex items-center gap-1">
@@ -115,21 +113,19 @@ export const FriendsCard: React.FC<FriendsCardProps> = ({
               Unirme
             </button>
           )}
-          
+
           <button
             onClick={handleMessage}
             className={cn(
               'flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors',
-              showChat
-                ? 'bg-[#ff6b35] text-white'
-                : 'text-white/70 hover:text-white hover:bg-white/10',
+              'bg-white/10 text-white hover:bg-white/20',
               !showJoinButton && 'flex-1'
             )}
           >
             <MessageSquare className="w-4 h-4" />
-            {showChat ? 'Cerrar' : 'Mensaje'}
+            Mensaje
           </button>
-          
+
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
@@ -146,7 +142,7 @@ export const FriendsCard: React.FC<FriendsCardProps> = ({
             {/* Dropdown menu */}
             {showMenu && (
               <>
-                <div 
+                <div
                   className="fixed inset-0 z-40"
                   onClick={() => setShowMenu(false)}
                 />
@@ -179,64 +175,6 @@ export const FriendsCard: React.FC<FriendsCardProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Chat panel */}
-      {showChat && (
-        <div className="fixed inset-x-0 bottom-0 h-80 bg-[#1a1a1a] border-t border-white/10 z-50 lg:right-80 lg:left-auto lg:w-96 lg:rounded-t-xl lg:m-4">
-          <div className="h-full flex flex-col">
-            {/* Chat header */}
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <div className="flex items-center gap-3">
-                <img
-                  src={friend.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.id}`}
-                  alt={friend.name}
-                  className="w-8 h-8 rounded-full"
-                />
-                <span className="text-white font-medium">{friend.name}</span>
-              </div>
-              <button
-                onClick={() => setShowChat(false)}
-                className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <span className="sr-only">Cerrar</span>
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            {/* Chat messages */}
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="text-center text-white/40 text-sm py-8">
-                Inicia una conversación con {friend.name}
-              </div>
-            </div>
-            
-            {/* Chat input */}
-            <div className="p-4 border-t border-white/10">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Escribe un mensaje..."
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]/50"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      showSuccess('Mensaje enviado', 'Tu mensaje ha sido enviado');
-                      (e.target as HTMLInputElement).value = '';
-                    }
-                  }}
-                />
-                <button 
-                  onClick={() => showSuccess('Mensaje enviado', 'Tu mensaje ha sido enviado')}
-                  className="px-4 py-2 bg-[#ff6b35] text-white rounded-xl hover:bg-[#ff8555] transition-colors"
-                >
-                  Enviar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };

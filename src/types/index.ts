@@ -143,6 +143,7 @@ export interface Notification {
   mediaTitle?: string;
   createdAt: string;
   read: boolean;
+  dismissed?: boolean;
 }
 
 // Stream types
@@ -177,7 +178,7 @@ export interface ApiResponse<T> {
 }
 
 // WebSocket event types
-export type WebSocketEvent = 
+export type WebSocketEvent =
   | 'user_joined'
   | 'user_left'
   | 'message_sent'

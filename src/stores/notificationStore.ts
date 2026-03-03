@@ -8,8 +8,9 @@ interface NotificationState {
 
 interface NotificationStore extends NotificationState {
   // Actions
-  addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => string;
+  addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'read' | 'dismissed'>) => string;
   removeNotification: (id: string) => void;
+  dismissNotification: (id: string) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clearNotifications: () => void;
@@ -31,6 +32,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       id,
       createdAt: new Date().toISOString(),
       read: false,
+      dismissed: false,
     };
 
     set((state) => ({
@@ -65,6 +67,14 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
         unreadCount: Math.max(0, state.unreadCount - 1),
       };
     });
+  },
+
+  dismissNotification: (id) => {
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        n.id === id ? { ...n, dismissed: true } : n
+      ),
+    }));
   },
 
   markAllAsRead: () => {

@@ -28,13 +28,13 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) =>
   const { user, logout, isAuthenticated } = useAuth();
   const { searchMedia } = useMedia();
   const { unreadCount, notifications } = useNotifications();
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ReturnType<typeof searchMedia>>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  
+
   const searchRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -91,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) =>
           >
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-          
+
           <Link to="/" className="flex items-center gap-2 group">
             <div className="w-8 h-8 bg-gradient-to-br from-[#ff6b35] to-[#ff8555] rounded-lg flex items-center justify-center">
               <Film className="w-5 h-5 text-white" />
@@ -111,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) =>
             leftIcon={<Search className="w-5 h-5" />}
             className="bg-white/5 border-white/10"
           />
-          
+
           {/* Search results dropdown */}
           {showSearchResults && searchResults.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-[#242424] border border-white/10 rounded-xl overflow-hidden shadow-xl z-50">
@@ -182,6 +182,17 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) =>
                           >
                             <p className="text-white text-sm font-medium">{notif.title}</p>
                             <p className="text-white/60 text-xs mt-0.5">{notif.message}</p>
+                            {notif.type === 'invite' && notif.roomCode && (
+                              <button
+                                onClick={() => {
+                                  setShowNotifications(false);
+                                  navigate(`/watch/${notif.roomCode}`);
+                                }}
+                                className="mt-2 text-xs text-[#ff6b35] hover:text-[#ff8555] bg-[#ff6b35]/10 hover:bg-[#ff6b35]/20 px-2 py-1 rounded"
+                              >
+                                Aceptar Invitación
+                              </button>
+                            )}
                           </div>
                         ))
                       )}

@@ -266,6 +266,28 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
   },
 
   addMessage: (message) => {
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser && message.userId !== currentUser.id) {
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          const ctx = new AudioContextClass();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+          gain.gain.setValueAtTime(0.2, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.1);
+        }
+      } catch (e) {
+        // Ignore auto-play errors
+      }
+    }
+
     const newMessage = {
       ...message,
       id: `msg-${Date.now()}`,

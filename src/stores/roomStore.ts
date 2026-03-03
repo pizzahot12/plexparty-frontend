@@ -301,17 +301,6 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
   sendChatMessage: (text) => {
     if (!text.trim()) return;
     webSocketService.sendMessage(text.trim());
-
-    // Optimistically add message locally
-    const currentUser = useAuthStore.getState().user;
-    if (currentUser) {
-      get().addMessage({
-        userId: currentUser.id,
-        userName: currentUser.name,
-        text: text.trim(),
-        userAvatar: currentUser.avatar,
-      });
-    }
   },
 
   clearMessages: () => set({ messages: [] }),

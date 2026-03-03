@@ -8,11 +8,11 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { apiService } from '@/lib/api-service';
 import { Button } from '@/components/Common/Button';
 import { EpisodeSelector } from './EpisodeSelector';
-import { 
-  Play, 
-  Plus, 
-  Check, 
-  Star, 
+import {
+  Play,
+  Plus,
+  Check,
+  Star,
   Users,
   Share2,
   Tv,
@@ -50,7 +50,7 @@ export const SeriesDetails: React.FC<SeriesDetailsProps> = ({ media, className }
           episodes: [],
         }));
         setSeasons(mappedSeasons);
-        
+
         if (mappedSeasons.length > 0) {
           const firstSeasonId = mappedSeasons[0].id;
           const episodesData = await apiService.getEpisodes(media.id, firstSeasonId);
@@ -80,7 +80,7 @@ export const SeriesDetails: React.FC<SeriesDetailsProps> = ({ media, className }
   useEffect(() => {
     const fetchEpisodes = async () => {
       if (seasons.length === 0) return;
-      
+
       const seasonId = seasons[selectedSeason]?.id;
       if (!seasonId) return;
 
@@ -124,10 +124,20 @@ export const SeriesDetails: React.FC<SeriesDetailsProps> = ({ media, className }
     showError('Próximamente', 'Función en desarrollo');
   };
 
-  const handleEpisodeSelect = (seasonIndex: number, episodeIndex: number) => {
+  const handleEpisodeSelect = async (seasonIndex: number, episodeIndex: number) => {
     setSelectedSeason(seasonIndex);
-    // Would navigate to watch page with specific episode
-    showSuccess('Episodio seleccionado', `Temporada ${seasonIndex + 1}, Episodio ${episodeIndex + 1}`);
+    const episode = episodes[episodeIndex];
+    if (!episode) return;
+
+    // Use the episode's own Jellyfin ID so the player loads the correct segment
+    const episodeTitle = `${media.title} - T${seasonIndex + 1}E${episode.number}: ${episode.title}`;
+    const code = await createRoom(episode.id, episodeTitle, episode.thumbnail || media.poster);
+    if (code) {
+      showSuccess('Sala creada', `${episodeTitle}`);
+      navigate(`/watch/${code}`);
+    } else {
+      showError('Error', 'No se pudo crear la sala para este episodio');
+    }
   };
 
   const totalEpisodes = episodes.length;
@@ -285,7 +295,7 @@ export const SeriesDetails: React.FC<SeriesDetailsProps> = ({ media, className }
             <div className="mt-12">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-white">Episodios</h2>
-                
+
                 {/* Season selector */}
                 <div className="relative">
                   <button
@@ -298,7 +308,7 @@ export const SeriesDetails: React.FC<SeriesDetailsProps> = ({ media, className }
                       showSeasonDropdown && 'rotate-180'
                     )} />
                   </button>
-                  
+
                   {showSeasonDropdown && (
                     <div className="absolute right-0 top-full mt-2 w-48 bg-[#242424] border border-white/10 rounded-xl overflow-hidden shadow-xl z-10">
                       {seasons.map((season, index) => (

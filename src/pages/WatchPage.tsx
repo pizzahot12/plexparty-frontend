@@ -36,7 +36,7 @@ const WatchPage: React.FC = () => {
     const interval = setInterval(() => {
       const { currentTime, duration } = useRoomStore.getState().videoState;
       if (currentTime > 0 && duration > 0) {
-        apiService.updateWatchProgress(room.mediaId, currentTime, duration).catch(() => {});
+        apiService.updateWatchProgress(room.mediaId, currentTime, duration).catch(() => { });
       }
     }, 10000);
 
@@ -193,7 +193,7 @@ const WatchPage: React.FC = () => {
           mobilePanel !== 'none' && 'lg:flex-1'
         )}>
           <VideoPlayer
-            src={room?.mediaId ? apiService.getStreamUrl(room.mediaId) : undefined}
+            mediaId={room?.mediaId}
             poster={media?.backdrop || media?.poster}
             className="h-full w-full"
             onToggleChat={() => setShowChat(!showChat)}
@@ -248,7 +248,7 @@ const WatchPage: React.FC = () => {
               <X className="w-5 h-5" />
             </button>
           </div>
-          
+
           {/* Panel content */}
           <div className="h-[calc(100%-44px)]">
             {mobilePanel === 'chat' && <ChatPanel isOpen onClose={() => setMobilePanel('none')} />}

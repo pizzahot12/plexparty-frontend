@@ -31,7 +31,7 @@ export const useMedia = () => {
   const [hasMoreMovies, setHasMoreMovies] = useState(true);
   const [hasMoreSeries, setHasMoreSeries] = useState(true);
 
-  const loadMovies = useCallback(async (skip = 0, limit = 500) => {
+  const loadMovies = useCallback(async (skip = 0, limit = 50) => {
     setLoading(true);
     setError(null);
     try {
@@ -51,10 +51,10 @@ export const useMedia = () => {
 
   const loadMoreMovies = useCallback(async () => {
     if (!hasMoreMovies || isLoading) return;
-    await loadMovies(movies.length, 500);
+    await loadMovies(movies.length, 50);
   }, [hasMoreMovies, isLoading, movies.length, loadMovies]);
 
-  const loadSeries = useCallback(async (skip = 0, limit = 500) => {
+  const loadSeries = useCallback(async (skip = 0, limit = 50) => {
     setLoading(true);
     setError(null);
     try {
@@ -74,15 +74,20 @@ export const useMedia = () => {
 
   const loadMoreSeries = useCallback(async () => {
     if (!hasMoreSeries || isLoading) return;
-    await loadSeries(series.length, 500);
+    await loadSeries(series.length, 50);
   }, [hasMoreSeries, isLoading, series.length, loadSeries]);
 
   const loadTrending = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiService.getMediaList('all', 0, 10);
-      const sorted = [...data].sort((a, b) => b.rating - a.rating);
+      // Fetch top-rated movies + series in parallel with tiny limit (no type=all which can be slow)
+      const [moviesData, seriesData] = await Promise.all([
+        apiService.getMediaList('movies', 0, 5).catch(() => []),
+        apiService.getMediaList('series', 0, 5).catch(() => []),
+      ]);
+      const combined = [...moviesData, ...seriesData];
+      const sorted = combined.sort((a, b) => b.rating - a.rating);
       setTrending(sorted);
     } catch (err) {
       setError((err as Error).message);
@@ -134,8 +139,8 @@ export const useMedia = () => {
     if (!isAuthenticated) return;
     if (hasFetchedRef.current && movies.length > 0) return;
     hasFetchedRef.current = true;
-    loadMovies(0, 500);
-    loadSeries(0, 500);
+    loadMovies(0, 50);
+    loadSeries(0, 50);
     loadTrending();
     loadContinueWatching();
   }, [isAuthenticated]);

@@ -330,7 +330,6 @@ export class ApiService {
   // This avoids: ERR_QUIC_PROTOCOL_ERROR, Render 60s timeout, and 512MB RAM waste from proxying.
   getStreamUrl(
     mediaId: string,
-    quality: string = '720p',
     options: { audioIndex?: number; subtitleIndex?: number } = {}
   ): string {
     const params = new URLSearchParams({

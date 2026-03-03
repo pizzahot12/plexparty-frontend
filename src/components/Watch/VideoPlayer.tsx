@@ -102,13 +102,36 @@ function buildHlsUrl(
 }
 
 // ─── Fetch audio + subtitle streams directly from Jellyfin ────────────────────
+// Uses POST /Items/{id}/PlaybackInfo with proper Authorization header.
+// The simple GET /Items/{id}?api_key=... returns 400 in most Jellyfin configs
+// because it expects the full MediaBrowser auth header or a userId.
 async function fetchJellyfinStreams(mediaId: string): Promise<JellyfinStream[]> {
-  const res = await fetch(
-    `${JELLYFIN_URL}/Items/${mediaId}?Fields=MediaStreams&api_key=${JELLYFIN_KEY}`
-  );
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data.MediaStreams ?? []) as JellyfinStream[];
+  try {
+    const authHeader = `MediaBrowser Client="WatchParty", Device="Browser", DeviceId="${DEVICE_ID}", Version="1.0.0", Token="${JELLYFIN_KEY}"`;
+    const res = await fetch(
+      `${JELLYFIN_URL}/Items/${mediaId}/PlaybackInfo?MediaSourceId=${mediaId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader,
+          'X-Emby-Authorization': authHeader,
+        },
+        body: JSON.stringify({ DeviceProfile: {} }),
+      }
+    );
+    if (!res.ok) {
+      console.warn('[Jellyfin] PlaybackInfo', res.status, res.statusText);
+      return [];
+    }
+    const data = await res.json();
+    // MediaSources[0].MediaStreams contains all audio/subtitle tracks
+    const streams: JellyfinStream[] = data?.MediaSources?.[0]?.MediaStreams ?? [];
+    return streams;
+  } catch (e) {
+    console.warn('[Jellyfin] fetchJellyfinStreams failed:', e);
+    return [];
+  }
 }
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
@@ -151,6 +174,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     room,
   } = useRooms();
 
+  // Track isPlaying in a ref so loadHls() callback doesn't capture stale state
+  const isPlayingRef = useRef(false);
   // ── UI state ─────────────────────────────────────────────────────────────────
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -167,6 +192,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [selectedSubtitle, setSelectedSubtitle] = useState<number>(-1); // -1 = off
 
   const { isPlaying, currentTime, duration, volume } = videoState;
+
+  // Keep ref in sync
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+
 
   // ── Fetch stream metadata when mediaId changes ────────────────────────────────
   useEffect(() => {
@@ -225,7 +254,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         setBuffering(false);
         // Restore position after quality/audio/subtitle switch
         if (savedTimeRef.current > 2) video.currentTime = savedTimeRef.current;
-        if (isPlaying) video.play().catch(() => { });
+        // Use ref (not stale closure) to auto-resume playback after quality change
+        if (isPlayingRef.current) video.play().catch(() => { });
       });
 
       hls.on(Hls.Events.ERROR, (_evt: unknown, data: { fatal: boolean; type: string; details: string }) => {

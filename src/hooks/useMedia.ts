@@ -31,7 +31,7 @@ export const useMedia = () => {
   const [hasMoreMovies, setHasMoreMovies] = useState(true);
   const [hasMoreSeries, setHasMoreSeries] = useState(true);
 
-  const loadMovies = useCallback(async (skip = 0, limit = 50) => {
+  const loadMovies = useCallback(async (skip = 0, limit = 500) => {
     setLoading(true);
     setError(null);
     try {
@@ -51,10 +51,10 @@ export const useMedia = () => {
 
   const loadMoreMovies = useCallback(async () => {
     if (!hasMoreMovies || isLoading) return;
-    await loadMovies(movies.length, 50);
+    await loadMovies(movies.length, 500);
   }, [hasMoreMovies, isLoading, movies.length, loadMovies]);
 
-  const loadSeries = useCallback(async (skip = 0, limit = 50) => {
+  const loadSeries = useCallback(async (skip = 0, limit = 500) => {
     setLoading(true);
     setError(null);
     try {
@@ -74,7 +74,7 @@ export const useMedia = () => {
 
   const loadMoreSeries = useCallback(async () => {
     if (!hasMoreSeries || isLoading) return;
-    await loadSeries(series.length, 50);
+    await loadSeries(series.length, 500);
   }, [hasMoreSeries, isLoading, series.length, loadSeries]);
 
   const loadTrending = useCallback(async () => {
@@ -104,7 +104,7 @@ export const useMedia = () => {
             return null;
           }
         });
-      
+
       const mediaData = (await Promise.all(mediaPromises)).filter((m): m is NonNullable<Awaited<ReturnType<typeof apiService.getMediaDetails>>> => m !== null);
       setContinueWatching(mediaData);
     } catch {
@@ -134,8 +134,8 @@ export const useMedia = () => {
     if (!isAuthenticated) return;
     if (hasFetchedRef.current && movies.length > 0) return;
     hasFetchedRef.current = true;
-    loadMovies(0, 50);
-    loadSeries(0, 50);
+    loadMovies(0, 500);
+    loadSeries(0, 500);
     loadTrending();
     loadContinueWatching();
   }, [isAuthenticated]);

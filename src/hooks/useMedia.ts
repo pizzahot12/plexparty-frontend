@@ -53,7 +53,7 @@ export const useMedia = () => {
 
   const loadMoreMovies = useCallback(async () => {
     if (!hasMoreMovies || isLoading) return;
-    await loadMovies(movies.length, 100);
+    await loadMovies(movies.length, 50);
   }, [hasMoreMovies, isLoading, movies.length, loadMovies]);
 
   const loadSeries = useCallback(async (skip = 0, limit = 200) => {
@@ -76,7 +76,7 @@ export const useMedia = () => {
 
   const loadMoreSeries = useCallback(async () => {
     if (!hasMoreSeries || isLoading) return;
-    await loadSeries(series.length, 100);
+    await loadSeries(series.length, 50);
   }, [hasMoreSeries, isLoading, series.length, loadSeries]);
 
   const loadTrending = useCallback(async () => {

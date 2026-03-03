@@ -94,7 +94,7 @@ export class ApiService {
       synopsis: string;
       genres: string[];
     }>>(`/media/list?type=${type}&skip=${skip}&limit=${limit}`);
-    
+
     return data.map(item => ({
       ...item,
       type: (type === 'series' ? 'series' : 'movie') as MediaType,
@@ -116,10 +116,10 @@ export class ApiService {
       subtitles: string[];
       audio: string[];
     }>(`/media/${id}`);
-    
+
     return {
       ...data,
-      type: mediaType,
+      type: (data as any).type || mediaType,
       cast: data.cast?.map((c, i) => ({
         id: `cast-${i}`,
         name: c.name,

@@ -21,13 +21,13 @@ interface RoomStore extends RoomState {
   joinRoom: (code: string) => Promise<boolean>;
   leaveRoom: () => void;
   setIsHost: (isHost: boolean) => void;
-  
+
   // Participant actions
   addParticipant: (participant: Participant) => void;
   removeParticipant: (userId: string) => void;
   updateParticipant: (userId: string, updates: Partial<Participant>) => void;
   kickParticipant: (userId: string) => Promise<boolean>;
-  
+
   // Video state actions
   setVideoPlaying: (isPlaying: boolean) => void;
   setVideoTime: (currentTime: number) => void;
@@ -36,17 +36,17 @@ interface RoomStore extends RoomState {
   setVideoQuality: (quality: VideoQuality) => void;
   setVideoPlaybackRate: (rate: number) => void;
   syncVideoState: (state: Partial<VideoState>) => void;
-  
+
   // Chat actions
   addMessage: (message: { userId: string; userName: string; text: string; userAvatar?: string }) => void;
   sendChatMessage: (text: string) => void;
   clearMessages: () => void;
-  
+
   // Connection actions
   setConnected: (connected: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  
+
   // WebSocket actions
   connectWebSocket: (roomId: string) => Promise<void>;
   disconnectWebSocket: () => void;
@@ -75,7 +75,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
     try {
       const result = await apiService.createRoom(mediaId, mediaTitle, isPrivate);
       const currentUser = useAuthStore.getState().user;
-      
+
       const room: Room = {
         id: result.roomId,
         code: result.code,
@@ -87,17 +87,17 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
         createdAt: new Date().toISOString(),
         isPrivate,
       };
-      
+
       set({
         room,
         isHost: true,
         isLoading: false,
         messages: [],
       });
-      
+
       // Connect WebSocket
       await get().connectWebSocket(result.roomId);
-      
+
       return result.code;
     } catch (error) {
       set({ isLoading: false, error: 'Error al crear la sala' });
@@ -110,7 +110,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
     try {
       const result = await apiService.getRoomByCode(code);
       const currentUser = useAuthStore.getState().user;
-      
+
       const room: Room = {
         id: result.roomId,
         code: result.code,
@@ -123,19 +123,19 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
         createdAt: result.createdAt,
         isPrivate: true,
       };
-      
+
       const isHost = result.host.id === currentUser?.id;
-      
+
       set({
         room,
         isHost,
         isLoading: false,
         messages: [],
       });
-      
+
       // Connect WebSocket
       await get().connectWebSocket(result.roomId);
-      
+
       return true;
     } catch (error) {
       set({ isLoading: false, error: 'Error al unirse a la sala' });
@@ -206,7 +206,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
   kickParticipant: async (userId) => {
     const { isHost, room } = get();
     if (!isHost || !room) return false;
-    
+
     try {
       await apiService.kickUser(room.id, userId);
       get().removeParticipant(userId);
@@ -279,7 +279,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
   sendChatMessage: (text) => {
     if (!text.trim()) return;
     webSocketService.sendMessage(text.trim());
-    
+
     // Optimistically add message locally
     const currentUser = useAuthStore.getState().user;
     if (currentUser) {
@@ -302,40 +302,51 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
     try {
       await webSocketService.connect(roomId);
       set({ isConnected: true });
-      
+
       // Subscribe to WebSocket events
       webSocketService.on('connection_established', () => {
         set({ isConnected: true });
       });
-      
+
       webSocketService.on('user_joined', () => {
-        // Refresh room data to get updated participant list
-        get().joinRoom(get().room?.code || '').catch(() => {});
+        // Refresh ONLY participant list via API (do NOT call joinRoom() — that would open another WS, causing an infinite loop)
+        const code = get().room?.code;
+        if (code) {
+          apiService.getRoomByCode(code).then((result) => {
+            const participants = [
+              { ...result.host, isHost: true, isOnline: true, isWatching: result.host.isWatching },
+              ...result.participants.map((p) => ({ ...p, isHost: false, isOnline: true, isWatching: p.isWatching })),
+            ];
+            set((state) => ({
+              room: state.room ? { ...state.room, participants } : state.room,
+            }));
+          }).catch(() => { });
+        }
       });
-      
+
       webSocketService.on('user_left', (event) => {
         const userId = event.userId as string;
         get().removeParticipant(userId);
       });
-      
+
       webSocketService.on('play', (event) => {
         set((state) => ({
           videoState: { ...state.videoState, isPlaying: true, currentTime: (event.currentTime as number) || state.videoState.currentTime },
         }));
       });
-      
+
       webSocketService.on('pause', (event) => {
         set((state) => ({
           videoState: { ...state.videoState, isPlaying: false, currentTime: (event.currentTime as number) || state.videoState.currentTime },
         }));
       });
-      
+
       webSocketService.on('seek', (event) => {
         set((state) => ({
           videoState: { ...state.videoState, currentTime: (event.currentTime as number) || state.videoState.currentTime },
         }));
       });
-      
+
       webSocketService.on('chat_message', (event) => {
         const msg = event as unknown as { userId: string; userName: string; text: string; userAvatar?: string };
         get().addMessage({
@@ -345,7 +356,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
           userAvatar: msg.userAvatar,
         });
       });
-      
+
       webSocketService.on('user_kicked', (event) => {
         const currentUser = useAuthStore.getState().user;
         const kickedUserId = event.userId as string;
@@ -356,7 +367,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
           get().removeParticipant(kickedUserId);
         }
       });
-      
+
       webSocketService.on('room_closed', () => {
         get().leaveRoom();
       });

@@ -380,7 +380,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         } else if ((containerRef.current as any)?.webkitRequestFullscreen) {
           await (containerRef.current as any).webkitRequestFullscreen();
         } else if ((videoRef.current as any)?.webkitEnterFullscreen) {
-          await (videoRef.current as any).webkitEnterFullscreen();
+          (videoRef.current as any).webkitEnterFullscreen();
         }
       } else {
         if (document.exitFullscreen) {
@@ -399,13 +399,30 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       !!document.fullscreenElement ||
       !!(document as any).webkitFullscreenElement
     );
+
+    // standard and webkit prefix for container-level fullscreen
     document.addEventListener('fullscreenchange', fn);
     document.addEventListener('webkitfullscreenchange', fn);
+
+    // iOS specific video-level fullscreen
+    const videoEl = videoRef.current;
+    const beginFn = () => setIsFullscreen(true);
+    const endFn = () => setIsFullscreen(false);
+
+    if (videoEl) {
+      videoEl.addEventListener('webkitbeginfullscreen', beginFn);
+      videoEl.addEventListener('webkitendfullscreen', endFn);
+    }
+
     return () => {
       document.removeEventListener('fullscreenchange', fn);
       document.removeEventListener('webkitfullscreenchange', fn);
+      if (videoEl) {
+        videoEl.removeEventListener('webkitbeginfullscreen', beginFn);
+        videoEl.removeEventListener('webkitendfullscreen', endFn);
+      }
     };
-  }, []);
+  }, [videoRef.current]);
 
   // Auto-hide controls
   const handleMouseMove = useCallback(() => {

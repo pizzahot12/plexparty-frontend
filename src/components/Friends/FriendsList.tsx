@@ -11,7 +11,7 @@ interface FriendsListProps {
 }
 
 export const FriendsList: React.FC<FriendsListProps> = ({ className }) => {
-  const { friends, onlineFriends, watchingFriends, requests, acceptRequest, rejectRequest } = useFriends();
+  const { friends, onlineFriends, watchingFriends, requests, acceptRequest, rejectRequest, removeFriend } = useFriends();
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredFriends = friends.filter((f) =>

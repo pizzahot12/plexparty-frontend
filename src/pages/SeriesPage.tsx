@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from '@/components/Layout/Header';
 import { Sidebar } from '@/components/Layout/Sidebar';
 import { MediaCard } from '@/components/Home/MediaCard';
@@ -10,22 +10,35 @@ import { cn } from '@/lib/utils';
 const SeriesPage: React.FC = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const { series, getByGenre, loadMoreSeries, hasMoreSeries, isLoading } = useMedia();
-  
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Infinite scroll: auto-load more when sentinel enters viewport
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting && hasMoreSeries && !isLoading) loadMoreSeries(); },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasMoreSeries, isLoading, loadMoreSeries]);
+
   const genres = ['Todos', 'Drama', 'Ciencia Ficción', 'Acción', 'Comedia', 'Terror', 'Misterio'];
-  
+
   const filteredSeries = selectedGenre && selectedGenre !== 'Todos'
     ? getByGenre(selectedGenre)
     : series;
 
   return (
     <div className="min-h-screen bg-[#1a1a1a]">
-      <Header 
-        onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
+      <Header
+        onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         isSidebarOpen={sidebarOpen}
       />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -59,7 +72,7 @@ const SeriesPage: React.FC = () => {
 
                 {showFilters && (
                   <>
-                    <div 
+                    <div
                       className="fixed inset-0 z-40"
                       onClick={() => setShowFilters(false)}
                     />
@@ -184,6 +197,8 @@ const SeriesPage: React.FC = () => {
               </button>
             </div>
           )}
+          {/* Infinite scroll sentinel */}
+          <div ref={sentinelRef} className="h-4" />
         </div>
       </main>
     </div>

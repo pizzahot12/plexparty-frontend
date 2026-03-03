@@ -25,6 +25,20 @@ const JELLYFIN_URL = import.meta.env.VITE_JELLYFIN_URL || 'https://jellyfin.watc
 const JELLYFIN_KEY = import.meta.env.VITE_JELLYFIN_KEY || 'fab44659f9b74192924b80d2a3b0e8a2';
 const DEVICE_ID = 'watchparty';
 
+// Cache the Jellyfin admin userId so we only look it up once per session
+let _cachedJellyfinUserId = '';
+async function getJellyfinUserId(): Promise<string> {
+  if (_cachedJellyfinUserId) return _cachedJellyfinUserId;
+  try {
+    const res = await fetch(`${JELLYFIN_URL}/Users?api_key=${JELLYFIN_KEY}`);
+    if (!res.ok) return '';
+    const users = await res.json() as Array<{ Id: string; Policy?: { IsAdministrator?: boolean } }>;
+    const admin = users.find(u => u.Policy?.IsAdministrator) ?? users[0];
+    _cachedJellyfinUserId = admin?.Id ?? '';
+  } catch { }
+  return _cachedJellyfinUserId;
+}
+
 // ─── Quality levels (Mbps, Jellyfin-style) ────────────────────────────────────
 // Each level adds VideoBitrate + MaxWidth/MaxHeight to the master.m3u8 request.
 // Jellyfin will transcode to exactly that bitrate cap.
@@ -102,32 +116,24 @@ function buildHlsUrl(
 }
 
 // ─── Fetch audio + subtitle streams directly from Jellyfin ────────────────────
-// Uses POST /Items/{id}/PlaybackInfo with proper Authorization header.
-// The simple GET /Items/{id}?api_key=... returns 400 in most Jellyfin configs
-// because it expects the full MediaBrowser auth header or a userId.
+// Uses GET /Users/{userId}/Items/{id}?Fields=MediaStreams — same pattern as the
+// backend's getJellyfinUserId(). POST PlaybackInfo returns 400 without a real user token.
 async function fetchJellyfinStreams(mediaId: string): Promise<JellyfinStream[]> {
   try {
-    const authHeader = `MediaBrowser Client="WatchParty", Device="Browser", DeviceId="${DEVICE_ID}", Version="1.0.0", Token="${JELLYFIN_KEY}"`;
+    const userId = await getJellyfinUserId();
+    if (!userId) {
+      console.warn('[Jellyfin] Could not resolve userId — audio/subtitle unavailable');
+      return [];
+    }
     const res = await fetch(
-      `${JELLYFIN_URL}/Items/${mediaId}/PlaybackInfo?MediaSourceId=${mediaId}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader,
-          'X-Emby-Authorization': authHeader,
-        },
-        body: JSON.stringify({ DeviceProfile: {} }),
-      }
+      `${JELLYFIN_URL}/Users/${userId}/Items/${mediaId}?Fields=MediaStreams&api_key=${JELLYFIN_KEY}`
     );
     if (!res.ok) {
-      console.warn('[Jellyfin] PlaybackInfo', res.status, res.statusText);
+      console.warn('[Jellyfin] MediaStreams fetch', res.status, res.statusText);
       return [];
     }
     const data = await res.json();
-    // MediaSources[0].MediaStreams contains all audio/subtitle tracks
-    const streams: JellyfinStream[] = data?.MediaSources?.[0]?.MediaStreams ?? [];
-    return streams;
+    return (data?.MediaStreams ?? []) as JellyfinStream[];
   } catch (e) {
     console.warn('[Jellyfin] fetchJellyfinStreams failed:', e);
     return [];

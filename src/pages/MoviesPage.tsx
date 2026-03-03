@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from '@/components/Layout/Header';
 import { Sidebar } from '@/components/Layout/Sidebar';
 import { MediaCard } from '@/components/Home/MediaCard';
@@ -10,22 +10,35 @@ import { cn } from '@/lib/utils';
 const MoviesPage: React.FC = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const { movies, getByGenre, loadMoreMovies, hasMoreMovies, isLoading } = useMedia();
-  
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Infinite scroll: auto-load more when sentinel enters viewport
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting && hasMoreMovies && !isLoading) loadMoreMovies(); },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasMoreMovies, isLoading, loadMoreMovies]);
+
   const genres = ['Todos', 'Acción', 'Aventura', 'Comedia', 'Drama', 'Ciencia Ficción', 'Terror'];
-  
+
   const filteredMovies = selectedGenre && selectedGenre !== 'Todos'
     ? getByGenre(selectedGenre)
     : movies;
 
   return (
     <div className="min-h-screen bg-[#1a1a1a]">
-      <Header 
-        onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
+      <Header
+        onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         isSidebarOpen={sidebarOpen}
       />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -59,7 +72,7 @@ const MoviesPage: React.FC = () => {
 
                 {showFilters && (
                   <>
-                    <div 
+                    <div
                       className="fixed inset-0 z-40"
                       onClick={() => setShowFilters(false)}
                     />
@@ -174,16 +187,8 @@ const MoviesPage: React.FC = () => {
             </div>
           )}
 
-          {hasMoreMovies && !isLoading && !selectedGenre && filteredMovies.length > 0 && (
-            <div className="text-center py-8">
-              <button
-                onClick={() => loadMoreMovies()}
-                className="px-6 py-3 bg-[#ff6b35] text-white rounded-xl hover:bg-[#ff8555] transition-colors font-medium"
-              >
-                Cargar más películas
-              </button>
-            </div>
-          )}
+          {/* Infinite scroll sentinel — IntersectionObserver triggers loadMoreMovies */}
+          <div ref={sentinelRef} className="h-4" />
         </div>
       </main>
     </div>

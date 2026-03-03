@@ -2,6 +2,10 @@
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://watch-together-2x.onrender.com/api';
 export const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'wss://watch-together-2x.onrender.com';
 
+// Jellyfin direct access (for video streaming — bypasses Render to avoid QUIC errors and 60s timeout)
+export const JELLYFIN_URL = import.meta.env.VITE_JELLYFIN_URL || 'https://jellyfin.watchtogether.nl';
+export const JELLYFIN_API_KEY = import.meta.env.VITE_JELLYFIN_API_KEY || 'fab44659f9b74192924b80d2a3b0e8a2';
+
 // Supabase Configuration
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';

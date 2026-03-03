@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/lib/constants';
+import { API_BASE_URL, JELLYFIN_URL, JELLYFIN_API_KEY } from '@/lib/constants';
 import { useAuthStore } from '@/stores/authStore';
 import type { MediaType } from '@/types';
 
@@ -326,24 +326,24 @@ export class ApiService {
     return `${this.baseUrl}/media/image/${itemId}/${type}${params}`;
   }
 
-  // Stream endpoint
+  // Stream endpoint — connects DIRECTLY to Jellyfin, bypassing Render.
+  // This avoids: ERR_QUIC_PROTOCOL_ERROR, Render 60s timeout, and 512MB RAM waste from proxying.
   getStreamUrl(
     mediaId: string,
     quality: string = '720p',
     options: { audioIndex?: number; subtitleIndex?: number } = {}
   ): string {
-    const token = this.getToken();
     const params = new URLSearchParams({
-      quality,
-      token: token || '',
+      Static: 'true',
+      api_key: JELLYFIN_API_KEY,
     });
     if (options.audioIndex !== undefined) {
-      params.set('audioIndex', String(options.audioIndex));
+      params.set('AudioStreamIndex', String(options.audioIndex));
     }
     if (options.subtitleIndex !== undefined) {
-      params.set('subtitleIndex', String(options.subtitleIndex));
+      params.set('SubtitleStreamIndex', String(options.subtitleIndex));
     }
-    return `${this.baseUrl}/stream/${mediaId}?${params}`;
+    return `${JELLYFIN_URL}/Videos/${mediaId}/stream?${params}`;
   }
 }
 

@@ -31,7 +31,7 @@ export const useMedia = () => {
   const [hasMoreMovies, setHasMoreMovies] = useState(true);
   const [hasMoreSeries, setHasMoreSeries] = useState(true);
 
-  const loadMovies = useCallback(async (skip = 0, limit = 50) => {
+  const loadMovies = useCallback(async (skip = 0, limit = 200) => {
     setLoading(true);
     setError(null);
     try {
@@ -51,10 +51,10 @@ export const useMedia = () => {
 
   const loadMoreMovies = useCallback(async () => {
     if (!hasMoreMovies || isLoading) return;
-    await loadMovies(movies.length, 50);
+    await loadMovies(movies.length, 100);
   }, [hasMoreMovies, isLoading, movies.length, loadMovies]);
 
-  const loadSeries = useCallback(async (skip = 0, limit = 50) => {
+  const loadSeries = useCallback(async (skip = 0, limit = 200) => {
     setLoading(true);
     setError(null);
     try {
@@ -74,7 +74,7 @@ export const useMedia = () => {
 
   const loadMoreSeries = useCallback(async () => {
     if (!hasMoreSeries || isLoading) return;
-    await loadSeries(series.length, 50);
+    await loadSeries(series.length, 100);
   }, [hasMoreSeries, isLoading, series.length, loadSeries]);
 
   const loadTrending = useCallback(async () => {
@@ -139,8 +139,8 @@ export const useMedia = () => {
     if (!isAuthenticated) return;
     if (hasFetchedRef.current && movies.length > 0) return;
     hasFetchedRef.current = true;
-    loadMovies(0, 50);
-    loadSeries(0, 50);
+    loadMovies(0, 200);
+    loadSeries(0, 200);
     loadTrending();
     loadContinueWatching();
   }, [isAuthenticated]);

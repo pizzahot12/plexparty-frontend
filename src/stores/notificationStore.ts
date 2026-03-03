@@ -14,7 +14,7 @@ interface NotificationStore extends NotificationState {
   markAllAsRead: () => void;
   clearNotifications: () => void;
   clearReadNotifications: () => void;
-  
+
   // Helpers
   getUnreadNotifications: () => Notification[];
   getNotificationsByType: (type: NotificationType) => Notification[];
@@ -32,18 +32,11 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       createdAt: new Date().toISOString(),
       read: false,
     };
-    
+
     set((state) => ({
       notifications: [newNotification, ...state.notifications],
       unreadCount: state.unreadCount + 1,
     }));
-
-    // Auto-dismiss after 5 seconds for non-invite notifications
-    if (notification.type !== 'invite') {
-      setTimeout(() => {
-        get().removeNotification(id);
-      }, 5000);
-    }
 
     return id;
   },
@@ -53,8 +46,8 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       const notification = state.notifications.find((n) => n.id === id);
       return {
         notifications: state.notifications.filter((n) => n.id !== id),
-        unreadCount: notification && !notification.read 
-          ? Math.max(0, state.unreadCount - 1) 
+        unreadCount: notification && !notification.read
+          ? Math.max(0, state.unreadCount - 1)
           : state.unreadCount,
       };
     });
@@ -64,7 +57,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     set((state) => {
       const notification = state.notifications.find((n) => n.id === id);
       if (!notification || notification.read) return state;
-      
+
       return {
         notifications: state.notifications.map((n) =>
           n.id === id ? { ...n, read: true } : n

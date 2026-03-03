@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { cn } from '@/lib/utils';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { X, Check, AlertCircle, Info, UserPlus, CheckCircle } from 'lucide-react';
@@ -60,14 +60,6 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   const Icon = iconMap[notification.type];
   const colors = colorMap[notification.type];
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose();
-    }, 5000);
-
-    return () => clearTimeout(timer);
-  }, [onClose]);
-
   return (
     <div
       className={cn(
@@ -127,27 +119,6 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
           <X className="w-4 h-4" />
         </button>
       </div>
-
-      {/* Progress bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10">
-        <div
-          className="h-full bg-current animate-shrink"
-          style={{ animationDuration: '5s' }}
-        />
-      </div>
     </div>
   );
 };
-
-// Add keyframes for the shrink animation
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes shrink {
-    from { width: 100%; }
-    to { width: 0%; }
-  }
-  .animate-shrink {
-    animation: shrink linear forwards;
-  }
-`;
-document.head.appendChild(style);

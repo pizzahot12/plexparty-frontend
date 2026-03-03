@@ -62,14 +62,14 @@ export const FriendsList: React.FC<FriendsListProps> = ({ className }) => {
                   <p className="text-white font-medium">{request.name}</p>
                   <p className="text-white/50 text-xs">Quiere ser tu amigo</p>
                 </div>
-                <button 
+                <button
                   onClick={() => acceptRequest(request.id)}
                   className="flex items-center gap-1 px-3 py-1.5 bg-green-500/20 text-green-400 text-sm rounded-lg hover:bg-green-500/30 transition-colors"
                 >
                   <Check className="w-4 h-4" />
                   Aceptar
                 </button>
-                <button 
+                <button
                   onClick={() => rejectRequest(request.id)}
                   className="flex items-center gap-1 px-3 py-1.5 bg-white/10 text-white/70 text-sm rounded-lg hover:bg-white/20 transition-colors"
                 >
@@ -111,7 +111,7 @@ export const FriendsList: React.FC<FriendsListProps> = ({ className }) => {
         <TabsContent value="all" className="mt-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredFriends.map((friend) => (
-              <FriendsCard key={friend.id} friend={friend} />
+              <FriendsCard key={friend.id} friend={friend} onRemove={removeFriend} />
             ))}
           </div>
           {filteredFriends.length === 0 && (
@@ -125,7 +125,7 @@ export const FriendsList: React.FC<FriendsListProps> = ({ className }) => {
         <TabsContent value="online" className="mt-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredOnline.map((friend) => (
-              <FriendsCard key={friend.id} friend={friend} />
+              <FriendsCard key={friend.id} friend={friend} onRemove={removeFriend} />
             ))}
           </div>
           {filteredOnline.length === 0 && (
@@ -139,7 +139,7 @@ export const FriendsList: React.FC<FriendsListProps> = ({ className }) => {
         <TabsContent value="watching" className="mt-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredWatching.map((friend) => (
-              <FriendsCard key={friend.id} friend={friend} showJoinButton />
+              <FriendsCard key={friend.id} friend={friend} showJoinButton onRemove={removeFriend} />
             ))}
           </div>
           {filteredWatching.length === 0 && (

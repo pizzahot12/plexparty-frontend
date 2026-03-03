@@ -32,16 +32,16 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   const navigate = useNavigate();
   const { createRoom } = useRooms();
   const { showSuccess, showError } = useNotifications();
-  
+
   const [roomName, setRoomName] = useState('');
   const [isPrivate, setIsPrivate] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreate = async () => {
     setIsCreating(true);
-    const code = await createRoom(mediaId, mediaTitle, mediaPoster);
+    const code = await createRoom(mediaId, mediaTitle, mediaPoster, isPrivate);
     setIsCreating(false);
-    
+
     if (code) {
       showSuccess('Sala creada', `Código: ${code}`);
       onClose();

@@ -79,24 +79,35 @@ const RoomsPage: React.FC = () => {
     }
   };
 
-  const handleCloseRoom = (roomId: string) => {
+  const handleCloseRoom = async (roomId: string) => {
     const room = rooms.find((r) => r.id === roomId);
-    if (room && room.participantCount > 1) {
-      showInfo('No se puede cerrar', 'Hay personas viendo en esta sala');
-      return;
+    if (!room) return;
+
+    // Allow closing if they are host, even if there's people
+    try {
+      await apiService.deleteRoom(roomId);
+      setRooms(rooms.filter((r) => r.id !== roomId));
+      showSuccess('Sala cerrada', 'La sala ha sido cerrada correctamente');
+    } catch (e: any) {
+      showError('Error', e.message || 'No se pudo cerrar la sala');
     }
-    setRooms(rooms.filter((r) => r.id !== roomId));
-    showSuccess('Sala cerrada', 'La sala ha sido cerrada correctamente');
   };
 
-  const handleCloseAllRooms = () => {
+  const handleCloseAllRooms = async () => {
     const myRooms = rooms.filter((r) => r.isHost);
     if (myRooms.length === 0) {
       showInfo('No tienes salas', 'No hay salas para cerrar');
       return;
     }
-    setRooms(rooms.filter((r) => !r.isHost));
-    showSuccess('Salas cerradas', 'Todas tus salas han sido cerradas');
+
+    try {
+      await Promise.all(myRooms.map(r => apiService.deleteRoom(r.id)));
+      setRooms(rooms.filter((r) => !r.isHost));
+      showSuccess('Salas cerradas', 'Todas tus salas han sido cerradas');
+    } catch (e: any) {
+      showError('Error', 'Algunas salas no se pudieron cerrar');
+      fetchRooms(); // refresh to get actual state
+    }
   };
 
   const myRoomsCount = rooms.filter((r) => r.isHost).length;

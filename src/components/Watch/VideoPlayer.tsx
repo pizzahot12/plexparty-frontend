@@ -373,17 +373,38 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, [duration, setVideoTime]);
 
   const toggleFullscreen = useCallback(async () => {
-    if (!containerRef.current) return;
     try {
-      if (!isFullscreen) await containerRef.current.requestFullscreen();
-      else await document.exitFullscreen();
-    } catch { }
+      if (!isFullscreen) {
+        if (containerRef.current?.requestFullscreen) {
+          await containerRef.current.requestFullscreen();
+        } else if ((containerRef.current as any)?.webkitRequestFullscreen) {
+          await (containerRef.current as any).webkitRequestFullscreen();
+        } else if ((videoRef.current as any)?.webkitEnterFullscreen) {
+          await (videoRef.current as any).webkitEnterFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen();
+        }
+      }
+    } catch (e) {
+      console.error('Fullscreen error:', e);
+    }
   }, [isFullscreen]);
 
   useEffect(() => {
-    const fn = () => setIsFullscreen(!!document.fullscreenElement);
+    const fn = () => setIsFullscreen(
+      !!document.fullscreenElement ||
+      !!(document as any).webkitFullscreenElement
+    );
     document.addEventListener('fullscreenchange', fn);
-    return () => document.removeEventListener('fullscreenchange', fn);
+    document.addEventListener('webkitfullscreenchange', fn);
+    return () => {
+      document.removeEventListener('fullscreenchange', fn);
+      document.removeEventListener('webkitfullscreenchange', fn);
+    };
   }, []);
 
   // Auto-hide controls

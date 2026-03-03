@@ -190,7 +190,7 @@ const WatchPage: React.FC = () => {
         {/* Video player - takes full width on mobile when panel is closed */}
         <div className={cn(
           'flex-1 transition-all duration-300',
-          mobilePanel !== 'none' && 'lg:flex-1'
+          mobilePanel !== 'none' ? (isPanelExpanded ? 'h-[20vh] lg:h-full lg:flex-1' : 'h-[60vh] lg:h-full lg:flex-1') : 'h-full flex-1'
         )}>
           <VideoPlayer
             mediaId={room?.mediaId}

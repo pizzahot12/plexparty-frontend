@@ -145,8 +145,8 @@ export class ApiService {
       roomId: string;
       code: string;
       mediaId: string;
-      host: { id: string; name: string; avatar?: string; isWatching: boolean };
-      participants: Array<{ id: string; name: string; avatar?: string; isWatching: boolean }>;
+      host: { id: string; name: string; avatar?: string; isWatching: boolean; isOnline: boolean };
+      participants: Array<{ id: string; name: string; avatar?: string; isWatching: boolean; isOnline: boolean }>;
       createdAt: string;
     }>(`/rooms/${code}`);
   }

@@ -117,8 +117,8 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
         mediaId: result.mediaId,
         hostId: result.host.id,
         participants: [
-          { ...result.host, isHost: true, isOnline: true, isWatching: result.host.isWatching },
-          ...result.participants.map((p) => ({ ...p, isHost: false, isOnline: true, isWatching: p.isWatching })),
+          { ...result.host, isHost: true, isOnline: result.host.isOnline ?? true, isWatching: result.host.isWatching },
+          ...result.participants.map((p) => ({ ...p, isHost: false, isOnline: p.isOnline ?? true, isWatching: p.isWatching })),
         ],
         createdAt: result.createdAt,
         isPrivate: true,
@@ -314,8 +314,8 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
         if (code) {
           apiService.getRoomByCode(code).then((result) => {
             const participants = [
-              { ...result.host, isHost: true, isOnline: true, isWatching: result.host.isWatching },
-              ...result.participants.map((p) => ({ ...p, isHost: false, isOnline: true, isWatching: p.isWatching })),
+              { ...result.host, isHost: true, isOnline: result.host.isOnline ?? true, isWatching: result.host.isWatching },
+              ...result.participants.map((p) => ({ ...p, isHost: false, isOnline: p.isOnline ?? true, isWatching: p.isWatching })),
             ];
             set((state) => ({
               room: state.room ? { ...state.room, participants } : state.room,
@@ -326,7 +326,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
 
       webSocketService.on('user_left', (event) => {
         const userId = event.userId as string;
-        get().removeParticipant(userId);
+        get().updateParticipant(userId, { isOnline: false });
       });
 
       webSocketService.on('play', (event) => {

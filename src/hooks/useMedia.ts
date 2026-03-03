@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMediaStore } from '@/stores/mediaStore';
 import { apiService } from '@/lib/api-service';
 import { useAuthStore } from '@/stores/authStore';
+
+let globalHasFetched = false;
 
 export const useMedia = () => {
   const {
@@ -133,17 +135,21 @@ export const useMedia = () => {
   }, [setLoading, setError, setSelectedMedia]);
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    if (hasFetchedRef.current && movies.length > 0) return;
-    hasFetchedRef.current = true;
-    loadMovies(0, 200);
-    loadSeries(0, 200);
+    if (!isAuthenticated) {
+      globalHasFetched = false;
+      return;
+    }
+    if (globalHasFetched) return;
+    globalHasFetched = true;
+
+    // Initial data load when authenticated
+    loadMovies(0, 50); // Just fetch 50 initially, infinite scroll will load the rest
+    loadSeries(0, 50);
     loadTrending();
     loadContinueWatching();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loadMovies, loadSeries, loadTrending, loadContinueWatching]);
 
   const allMedia = useMemo(() => [...movies, ...series], [movies, series]);
 

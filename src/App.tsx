@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
 import { NotificationContainer } from '@/components/Layout/Notification';
 import { FriendsChatWidget } from '@/components/Friends/FriendsChatWidget';
+import { supabase } from '@/lib/supabase';
 
 // Lazy load pages for better performance
 const LoginPage = React.lazy(() => import('./pages/LoginPage'));
@@ -197,11 +198,41 @@ const AppRoutes: React.FC = () => {
 const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const initSession = useAuthStore((s) => s.initSession);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const googleLogin = useAuthStore((s) => s.googleLogin);
+  const logout = useAuthStore((s) => s.logout);
   const [ready, setReady] = useState(false);
+  const [waitlistError, setWaitlistError] = useState(false);
 
   useEffect(() => {
-    initSession().finally(() => setReady(true));
-  }, [initSession]);
+    let mounted = true;
+
+    initSession().finally(() => {
+      if (mounted) setReady(true);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      if (event === 'SIGNED_IN' && session) {
+        setReady(false);
+        const result = await googleLogin(session.access_token);
+        if (result && !result.success && result.isPending) {
+          setWaitlistError(true);
+          await supabase.auth.signOut();
+        } else if (result && !result.success) {
+          await logout();
+          await supabase.auth.signOut();
+        }
+        if (mounted) setReady(true);
+      } else if (event === 'SIGNED_OUT') {
+        await logout();
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [initSession, googleLogin, logout]);
 
   // Start/stop global presence tracking based on auth state
   useEffect(() => {
@@ -216,6 +247,21 @@ const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) 
       });
     };
   }, [isAuthenticated, ready]);
+
+  if (waitlistError) {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] flex flex-col items-center justify-center p-6 text-center">
+        <h1 className="text-3xl font-bold text-white mb-4">¡Estás en la Lista de Espera!</h1>
+        <p className="text-white/70 max-w-md mx-auto">
+          Hemos recibido tu solicitud de registro. Actualmente, PlexParty requiere aprobación del administrador.
+          Por favor, espera a que tu cuenta sea aprobada para poder iniciar sesión.
+        </p>
+        <button onClick={() => { setWaitlistError(false); setReady(true); window.location.href = '/login'; }} className="mt-8 px-6 py-2 bg-[#ff6b35] text-white rounded-lg hover:bg-[#ff8555] font-medium transition-colors">
+          Volver al inicio
+        </button>
+      </div>
+    );
+  }
 
   if (!ready) {
     return <PageLoader />;

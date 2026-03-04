@@ -65,6 +65,16 @@ export class ApiService {
     );
   }
 
+  async googleLogin(accessToken: string) {
+    return this.request<{ token: string; user: { id: string; email: string; name: string } }>(
+      '/auth/google-login',
+      {
+        method: 'POST',
+        body: JSON.stringify({ access_token: accessToken }),
+      }
+    );
+  }
+
   async register(email: string, password: string, name: string) {
     return this.request<{ token: string; user: { id: string; email: string; name: string } }>(
       '/auth/register',

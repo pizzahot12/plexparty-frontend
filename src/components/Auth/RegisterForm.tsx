@@ -6,6 +6,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { Button } from '@/components/Common/Button';
 import { Input } from '@/components/Common/Input';
 import { Mail, Lock, User, Film, ArrowRight, Check } from 'lucide-react';
+import { GoogleButton } from './GoogleButton';
 
 interface RegisterFormProps {
   className?: string;
@@ -224,6 +225,17 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ className }) => {
           Crear cuenta
         </Button>
       </form>
+
+      {/* Divider */}
+      <div className="flex items-center gap-4 my-6">
+        <div className="flex-1 h-px bg-white/10" />
+        <span className="text-white/40 text-sm">o también mediante</span>
+        <div className="flex-1 h-px bg-white/10" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        <GoogleButton isRegister={true} />
+      </div>
 
       {/* Login link */}
       <p className="text-center text-white/60 mt-6">

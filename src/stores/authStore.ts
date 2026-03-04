@@ -5,6 +5,7 @@ import type { User, AuthState } from '@/types';
 
 interface AuthStore extends AuthState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  googleLogin: (accessToken: string) => Promise<{ success: boolean; error?: string; isPending?: boolean }>;
   register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
@@ -28,7 +29,7 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true });
         try {
           const { token, user } = get();
-          
+
           if (token && user) {
             // Validate token by making a request
             set({
@@ -76,6 +77,35 @@ export const useAuthStore = create<AuthStore>()(
         } catch (error) {
           set({ isLoading: false });
           return { success: false, error: (error as Error).message };
+        }
+      },
+
+      googleLogin: async (accessToken: string) => {
+        set({ isLoading: true });
+        try {
+          const data = await apiService.googleLogin(accessToken);
+
+          const user: User = {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.name,
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+          };
+
+          set({
+            user,
+            token: data.token,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+          return { success: true };
+        } catch (error) {
+          set({ isLoading: false });
+          const errorMessage = (error as Error).message;
+          if (errorMessage.includes('lista de espera') || errorMessage.includes('PENDING_APPROVAL')) {
+            return { success: false, isPending: true, error: errorMessage };
+          }
+          return { success: false, error: errorMessage };
         }
       },
 

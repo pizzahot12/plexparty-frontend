@@ -6,6 +6,7 @@ export interface User {
   avatar?: string;
   friendCode?: string;
   createdAt?: string;
+  is_approved?: boolean;
 }
 
 export interface AuthState {

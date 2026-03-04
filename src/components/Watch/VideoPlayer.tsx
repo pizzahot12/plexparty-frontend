@@ -29,7 +29,11 @@ let _cachedJellyfinUserId = '';
 async function getJellyfinUserId(token: string): Promise<string> {
   if (_cachedJellyfinUserId) return _cachedJellyfinUserId;
   try {
-    const res = await fetch(`${PROXY_URL}/Users?token=${token}`);
+    const res = await fetch(`${PROXY_URL}/Users`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
     if (!res.ok) return '';
     const users = await res.json() as Array<{ Id: string; Policy?: { IsAdministrator?: boolean } }>;
     const admin = users.find(u => u.Policy?.IsAdministrator) ?? users[0];
@@ -75,12 +79,10 @@ function buildHlsUrl(
   mediaId: string,
   quality: QualityLevel,
   sessionId: string,
-  token: string,
   audioIndex?: number,
   subtitleIndex?: number
 ): string {
   const params: Record<string, string> = {
-    token, // We inject token for the proxy header verification
     MediaSourceId: mediaId,
     DeviceId: DEVICE_ID,
     PlaySessionId: sessionId,
@@ -126,7 +128,12 @@ async function fetchJellyfinStreams(mediaId: string, token: string): Promise<Jel
       return [];
     }
     const res = await fetch(
-      `${PROXY_URL}/Users/${userId}/Items/${mediaId}?Fields=MediaStreams&token=${token}`
+      `${PROXY_URL}/Users/${userId}/Items/${mediaId}?Fields=MediaStreams`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
     );
     if (!res.ok) {
       console.warn('[Jellyfin] MediaStreams fetch', res.status, res.statusText);
@@ -240,7 +247,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
 
     const subIdx = subtitle ?? -1;
-    const hlsUrl = buildHlsUrl(mid, quality, playSessionId.current, token, audio, subIdx >= 0 ? subIdx : undefined);
+    const hlsUrl = buildHlsUrl(mid, quality, playSessionId.current, audio, subIdx >= 0 ? subIdx : undefined);
 
     if (Hls.isSupported()) {
       const hls = new Hls({
@@ -253,6 +260,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         maxMaxBufferLength: 60,
         startPosition: -1,
         autoStartLoad: true,
+        xhrSetup: (xhr: XMLHttpRequest) => {
+          xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        }
       });
 
       hlsRef.current = hls;

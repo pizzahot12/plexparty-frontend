@@ -48,7 +48,7 @@ interface RoomStore extends RoomState {
   syncVideoState: (state: Partial<VideoState>) => void;
 
   // Chat actions
-  addMessage: (message: { userId: string; userName: string; text: string; userAvatar?: string }) => void;
+  addMessage: (message: { userId: string; userName: string; text: string; userAvatar?: string; timestamp?: string }) => void;
   sendChatMessage: (text: string) => void;
   clearMessages: () => void;
 

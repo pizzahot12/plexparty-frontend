@@ -75,10 +75,10 @@ interface JellyfinStream {
 function buildHlsUrl(
   mediaId: string,
   quality: QualityLevel,
+  sessionId: string,
   audioIndex?: number,
   subtitleIndex?: number
 ): string {
-  const sessionId = `pp_${mediaId.substring(0, 8)}_${Date.now()}`;
   const params: Record<string, string> = {
     api_key: JELLYFIN_KEY,
     MediaSourceId: mediaId,
@@ -180,6 +180,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     room,
   } = useRooms();
 
+  // Single static session id to prevent leaking transcode sessions on Jellyfin
+  const playSessionId = useRef(`pp_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`);
+
   // Track isPlaying in a ref so loadHls() callback doesn't capture stale state
   const isPlayingRef = useRef(false);
   // ── UI state ─────────────────────────────────────────────────────────────────
@@ -237,7 +240,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
 
     const subIdx = subtitle ?? -1;
-    const url = buildHlsUrl(mid, quality, audio, subIdx >= 0 ? subIdx : undefined);
+    const url = buildHlsUrl(mid, quality, playSessionId.current, audio, subIdx >= 0 ? subIdx : undefined);
 
     if (Hls.isSupported()) {
       const hls = new Hls({

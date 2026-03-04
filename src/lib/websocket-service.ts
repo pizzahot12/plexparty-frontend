@@ -139,6 +139,12 @@ export class WebSocketService {
     }
   }
 
+  clearHandlers(): void {
+    this.eventHandlers.forEach((_, key) => {
+      this.eventHandlers.set(key, []);
+    });
+  }
+
   on(event: WebSocketEventType, handler: EventHandler): () => void {
     const handlers = this.eventHandlers.get(event);
     if (handlers) {

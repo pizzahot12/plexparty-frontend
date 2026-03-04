@@ -311,6 +311,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
 
   connectWebSocket: async (roomId) => {
     try {
+      webSocketService.clearHandlers();
       await webSocketService.connect(roomId);
       set({ isConnected: true });
 

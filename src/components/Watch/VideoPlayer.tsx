@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 import { useRooms } from '@/hooks/useRooms';
 import { useAuth } from '@/hooks/useAuth';
 import { realtimeRoomService } from '@/lib/realtime-service';
+import { API_BASE_URL } from '@/lib/constants';
+import { useAuthStore } from '@/stores/authStore';
 import {
   Play,
   Pause,
@@ -19,19 +21,16 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 
-// ─── Jellyfin direct config ────────────────────────────────────────────────────
-// Stream goes directly browser → Jellyfin (not through Render).
-// This avoids Render's 60s timeout and 512MB RAM limit for video proxying.
-const JELLYFIN_URL = import.meta.env.VITE_JELLYFIN_URL || 'https://jellyfin.watchtogether.nl';
-const JELLYFIN_KEY = import.meta.env.VITE_JELLYFIN_KEY || 'fab44659f9b74192924b80d2a3b0e8a2';
+// ─── Proxy Config ────────────────────────────────────────────────────────────
+const PROXY_URL = `${API_BASE_URL}/proxy/jellyfin`;
 const DEVICE_ID = 'watchparty';
 
 // Cache the Jellyfin admin userId so we only look it up once per session
 let _cachedJellyfinUserId = '';
-async function getJellyfinUserId(): Promise<string> {
+async function getJellyfinUserId(token: string): Promise<string> {
   if (_cachedJellyfinUserId) return _cachedJellyfinUserId;
   try {
-    const res = await fetch(`${JELLYFIN_URL}/Users?api_key=${JELLYFIN_KEY}`);
+    const res = await fetch(`${PROXY_URL}/Users?token=${token}`);
     if (!res.ok) return '';
     const users = await res.json() as Array<{ Id: string; Policy?: { IsAdministrator?: boolean } }>;
     const admin = users.find(u => u.Policy?.IsAdministrator) ?? users[0];
@@ -77,11 +76,12 @@ function buildHlsUrl(
   mediaId: string,
   quality: QualityLevel,
   sessionId: string,
+  token: string,
   audioIndex?: number,
   subtitleIndex?: number
 ): string {
   const params: Record<string, string> = {
-    api_key: JELLYFIN_KEY,
+    token, // We inject token for the proxy header verification
     MediaSourceId: mediaId,
     DeviceId: DEVICE_ID,
     PlaySessionId: sessionId,
@@ -113,21 +113,21 @@ function buildHlsUrl(
   }
 
   const qs = new URLSearchParams(params).toString();
-  return `${JELLYFIN_URL}/Videos/${mediaId}/master.m3u8?${qs}`;
+  return `${PROXY_URL}/Videos/${mediaId}/master.m3u8?${qs}`;
 }
 
 // ─── Fetch audio + subtitle streams directly from Jellyfin ────────────────────
 // Uses GET /Users/{userId}/Items/{id}?Fields=MediaStreams — same pattern as the
 // backend's getJellyfinUserId(). POST PlaybackInfo returns 400 without a real user token.
-async function fetchJellyfinStreams(mediaId: string): Promise<JellyfinStream[]> {
+async function fetchJellyfinStreams(mediaId: string, token: string): Promise<JellyfinStream[]> {
   try {
-    const userId = await getJellyfinUserId();
+    const userId = await getJellyfinUserId(token);
     if (!userId) {
       console.warn('[Jellyfin] Could not resolve userId — audio/subtitle unavailable');
       return [];
     }
     const res = await fetch(
-      `${JELLYFIN_URL}/Users/${userId}/Items/${mediaId}?Fields=MediaStreams&api_key=${JELLYFIN_KEY}`
+      `${PROXY_URL}/Users/${userId}/Items/${mediaId}?Fields=MediaStreams&token=${token}`
     );
     if (!res.ok) {
       console.warn('[Jellyfin] MediaStreams fetch', res.status, res.statusText);
@@ -209,14 +209,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // ── Fetch stream metadata when mediaId changes ────────────────────────────────
   useEffect(() => {
-    if (!mediaId) return;
+    if (!mediaId || !token) return;
     setAudioStreams([]);
     setSubtitleStreams([]);
     setSelectedAudio(undefined);
     setSelectedSubtitle(-1);
     setSelectedQuality(QUALITY_LEVELS[0]);
 
-    fetchJellyfinStreams(mediaId).then((streams) => {
+    fetchJellyfinStreams(mediaId, token).then((streams) => {
       const audio = streams.filter(s => s.Type === 'Audio');
       const subtitle = streams.filter(s => s.Type === 'Subtitle');
       setAudioStreams(audio);
@@ -225,12 +225,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       const defAudio = audio.find(a => a.IsDefault) ?? audio[0];
       if (defAudio) setSelectedAudio(defAudio.Index);
     });
-  }, [mediaId]);
+  }, [mediaId, token]);
 
   // ── Load / reload HLS when mediaId or settings change ────────────────────────
   const loadHls = useCallback((mid: string, quality: QualityLevel, audio?: number, subtitle?: number) => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !token) return; // Ensure token is available
 
     setError(null);
     setBuffering(true);
@@ -241,7 +241,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
 
     const subIdx = subtitle ?? -1;
-    const url = buildHlsUrl(mid, quality, playSessionId.current, audio, subIdx >= 0 ? subIdx : undefined);
+    const hlsUrl = buildHlsUrl(mid, quality, playSessionId.current, token, audio, subIdx >= 0 ? subIdx : undefined);
 
     if (Hls.isSupported()) {
       const hls = new Hls({

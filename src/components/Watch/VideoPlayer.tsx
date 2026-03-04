@@ -3,6 +3,7 @@ import Hls from 'hls.js';
 import { cn } from '@/lib/utils';
 import { useRooms } from '@/hooks/useRooms';
 import { useAuth } from '@/hooks/useAuth';
+import { realtimeRoomService } from '@/lib/realtime-service';
 import {
   Play,
   Pause,
@@ -357,7 +358,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handlePlaying = useCallback(() => setBuffering(false), []);
 
   // ── Player controls ───────────────────────────────────────────────────────────
-  const togglePlay = useCallback(() => setVideoPlaying(!isPlaying), [isPlaying, setVideoPlaying]);
+  const togglePlay = useCallback(() => {
+    const newPlaying = !isPlaying;
+    setVideoPlaying(newPlaying);
+    const time = videoRef.current?.currentTime ?? 0;
+    if (newPlaying) {
+      realtimeRoomService.sendPlay(time);
+    } else {
+      realtimeRoomService.sendPause(time);
+    }
+  }, [isPlaying, setVideoPlaying]);
   const toggleMute = useCallback(() => setVideoVolume(volume === 0 ? 1 : 0), [volume, setVideoVolume]);
   const handleVolumeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setVideoVolume(parseFloat(e.target.value)),
@@ -367,12 +377,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const time = parseFloat(e.target.value);
     setVideoTime(time);
     if (videoRef.current) videoRef.current.currentTime = time;
+    realtimeRoomService.sendSeek(time);
   }, [setVideoTime]);
   const skip = useCallback((seconds: number) => {
     if (!videoRef.current) return;
     const t = Math.max(0, Math.min(duration, videoRef.current.currentTime + seconds));
     setVideoTime(t);
     videoRef.current.currentTime = t;
+    realtimeRoomService.sendSeek(t);
   }, [duration, setVideoTime]);
 
   const toggleFullscreen = useCallback(async () => {

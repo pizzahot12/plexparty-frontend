@@ -1,15 +1,10 @@
 /**
  * Room Realtime Service — powered by Supabase Realtime
  *
- * Replaces the hand-rolled WebSocket implementation with Supabase's
- * battle-tested Channels + Broadcast + Presence.
- *
- * Features:
- *  • Chat messages via Broadcast (instant, no DB round-trip for delivery)
- *  • Video sync (play/pause/seek) via Broadcast
+ * Uses Supabase Channels + Broadcast + Presence for:
+ *  • Chat messages (instant broadcast, no DB round-trip)
+ *  • Video sync (play/pause/seek + heartbeat)
  *  • Presence tracking (who is online)
- *  • Automatic reconnection handled by Supabase SDK
- *  • No duplicate-listener bugs (single channel subscription)
  */
 
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -17,14 +12,6 @@ import supabase from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-export type RoomEventType =
-    | 'chat_message'
-    | 'play'
-    | 'pause'
-    | 'seek'
-    | 'user_kicked'
-    | 'room_closed';
 
 export interface ChatPayload {
     userId: string;
@@ -37,6 +24,12 @@ export interface ChatPayload {
 export interface VideoSyncPayload {
     currentTime: number;
     triggeredBy: string;
+}
+
+export interface HeartbeatPayload {
+    currentTime: number;
+    isPlaying: boolean;
+    hostId: string;
 }
 
 export interface PresenceState {
@@ -54,12 +47,14 @@ type EventCallback<T = Record<string, unknown>> = (payload: T) => void;
 class RealtimeRoomService {
     private channel: RealtimeChannel | null = null;
     private roomId: string | null = null;
+    private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
-    // Callbacks — set once per join, cleared on leave
+    // Callbacks
     private onChatMessage: EventCallback<ChatPayload> | null = null;
     private onPlay: EventCallback<VideoSyncPayload> | null = null;
     private onPause: EventCallback<VideoSyncPayload> | null = null;
     private onSeek: EventCallback<VideoSyncPayload> | null = null;
+    private onHeartbeat: EventCallback<HeartbeatPayload> | null = null;
     private onUserKicked: EventCallback<{ userId: string }> | null = null;
     private onRoomClosed: EventCallback | null = null;
     private onPresenceSync: EventCallback<PresenceState[]> | null = null;
@@ -74,56 +69,56 @@ class RealtimeRoomService {
             onPlay: EventCallback<VideoSyncPayload>;
             onPause: EventCallback<VideoSyncPayload>;
             onSeek: EventCallback<VideoSyncPayload>;
+            onHeartbeat: EventCallback<HeartbeatPayload>;
             onUserKicked: EventCallback<{ userId: string }>;
             onRoomClosed: EventCallback;
             onPresenceSync: EventCallback<PresenceState[]>;
         }
     ): void {
-        // If already in a room, leave first
         if (this.channel) {
             this.leave();
         }
 
         this.roomId = roomId;
 
-        // Store callbacks
         this.onChatMessage = callbacks.onChatMessage;
         this.onPlay = callbacks.onPlay;
         this.onPause = callbacks.onPause;
         this.onSeek = callbacks.onSeek;
+        this.onHeartbeat = callbacks.onHeartbeat;
         this.onUserKicked = callbacks.onUserKicked;
         this.onRoomClosed = callbacks.onRoomClosed;
         this.onPresenceSync = callbacks.onPresenceSync;
 
-        // Create a Supabase Realtime channel for this room
         this.channel = supabase.channel(`room:${roomId}`, {
             config: { presence: { key: userInfo.id } },
         });
+
+        const myId = userInfo.id;
 
         // ── Broadcast listeners ─────────────────────────────────────────────
 
         this.channel
             .on('broadcast', { event: 'chat_message' }, ({ payload }) => {
+                // Skip own messages (we add them locally in sendChatMessage)
+                if (payload.userId === myId) return;
                 this.onChatMessage?.(payload as ChatPayload);
             })
             .on('broadcast', { event: 'play' }, ({ payload }) => {
-                // Don't echo back to sender
-                const user = useAuthStore.getState().user;
-                if (payload.triggeredBy !== user?.id) {
-                    this.onPlay?.(payload as VideoSyncPayload);
-                }
+                if (payload.triggeredBy === myId) return;
+                this.onPlay?.(payload as VideoSyncPayload);
             })
             .on('broadcast', { event: 'pause' }, ({ payload }) => {
-                const user = useAuthStore.getState().user;
-                if (payload.triggeredBy !== user?.id) {
-                    this.onPause?.(payload as VideoSyncPayload);
-                }
+                if (payload.triggeredBy === myId) return;
+                this.onPause?.(payload as VideoSyncPayload);
             })
             .on('broadcast', { event: 'seek' }, ({ payload }) => {
-                const user = useAuthStore.getState().user;
-                if (payload.triggeredBy !== user?.id) {
-                    this.onSeek?.(payload as VideoSyncPayload);
-                }
+                if (payload.triggeredBy === myId) return;
+                this.onSeek?.(payload as VideoSyncPayload);
+            })
+            .on('broadcast', { event: 'heartbeat' }, ({ payload }) => {
+                if (payload.hostId === myId) return;
+                this.onHeartbeat?.(payload as HeartbeatPayload);
             })
             .on('broadcast', { event: 'user_kicked' }, ({ payload }) => {
                 this.onUserKicked?.(payload as { userId: string });
@@ -136,7 +131,6 @@ class RealtimeRoomService {
 
         this.channel.on('presence', { event: 'sync' }, () => {
             const state = this.channel!.presenceState<PresenceState>();
-            // Flatten: each key maps to an array of presences, take the first
             const users: PresenceState[] = Object.values(state).map((arr) => arr[0]);
             this.onPresenceSync?.(users);
         });
@@ -160,6 +154,7 @@ class RealtimeRoomService {
     // ── Public: leave the room ──────────────────────────────────────────────
 
     leave(): void {
+        this.stopHeartbeat();
         if (this.channel) {
             this.channel.untrack();
             supabase.removeChannel(this.channel);
@@ -171,16 +166,18 @@ class RealtimeRoomService {
         this.onPlay = null;
         this.onPause = null;
         this.onSeek = null;
+        this.onHeartbeat = null;
         this.onUserKicked = null;
         this.onRoomClosed = null;
         this.onPresenceSync = null;
     }
 
     // ── Public: send chat message ───────────────────────────────────────────
+    // Returns the payload so the caller can add it locally (optimistic update)
 
-    sendChatMessage(text: string): void {
+    sendChatMessage(text: string): ChatPayload | null {
         const user = useAuthStore.getState().user;
-        if (!this.channel || !user) return;
+        if (!this.channel || !user) return null;
 
         const payload: ChatPayload = {
             userId: user.id,
@@ -196,8 +193,7 @@ class RealtimeRoomService {
             payload,
         });
 
-        // Also save to DB for history (fire & forget)
-        this._persistMessage(payload);
+        return payload;
     }
 
     // ── Public: video sync commands ─────────────────────────────────────────
@@ -232,6 +228,35 @@ class RealtimeRoomService {
         });
     }
 
+    // ── Public: heartbeat (host broadcasts position every 2s) ─────────────
+
+    startHeartbeat(getState: () => { currentTime: number; isPlaying: boolean }): void {
+        this.stopHeartbeat();
+        const user = useAuthStore.getState().user;
+        if (!user) return;
+
+        this.heartbeatTimer = setInterval(() => {
+            if (!this.channel) return;
+            const state = getState();
+            this.channel.send({
+                type: 'broadcast',
+                event: 'heartbeat',
+                payload: {
+                    currentTime: state.currentTime,
+                    isPlaying: state.isPlaying,
+                    hostId: user.id,
+                } as HeartbeatPayload,
+            });
+        }, 2000);
+    }
+
+    stopHeartbeat(): void {
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
+        }
+    }
+
     // ── Public: admin commands ──────────────────────────────────────────────
 
     sendKickUser(userId: string): void {
@@ -256,21 +281,6 @@ class RealtimeRoomService {
 
     isJoined(): boolean {
         return this.channel !== null;
-    }
-
-    // ── Private: persist message to DB ──────────────────────────────────────
-
-    private async _persistMessage(msg: ChatPayload): Promise<void> {
-        if (!this.roomId) return;
-        try {
-            await supabase.from('room_messages').insert({
-                room_id: this.roomId,
-                user_id: msg.userId,
-                text: msg.text,
-            });
-        } catch {
-            // Non-critical — message was already broadcast in real-time
-        }
     }
 }
 

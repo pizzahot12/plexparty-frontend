@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { Room, Participant, VideoState, VideoQuality } from '@/types';
 import { apiService } from '@/lib/api-service';
 import { realtimeRoomService } from '@/lib/realtime-service';
-import type { PresenceState } from '@/lib/realtime-service';
+import type { PresenceState, HeartbeatPayload } from '@/lib/realtime-service';
 import { useAuthStore } from '@/stores/authStore';
 
 interface Message {
@@ -316,7 +316,17 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
 
   sendChatMessage: (text) => {
     if (!text.trim()) return;
-    realtimeRoomService.sendChatMessage(text.trim());
+    const payload = realtimeRoomService.sendChatMessage(text.trim());
+    // Optimistic: add own message locally immediately
+    if (payload) {
+      get().addMessage({
+        userId: payload.userId,
+        userName: payload.userName,
+        text: payload.text,
+        userAvatar: payload.userAvatar,
+        timestamp: payload.timestamp,
+      });
+    }
   },
 
   clearMessages: () => set({ messages: [] }),
@@ -384,6 +394,25 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
           }));
         },
 
+        onHeartbeat: (payload: HeartbeatPayload) => {
+          // Non-host receives host's position and syncs if drift > 2s
+          const myState = get().videoState;
+          const drift = Math.abs(myState.currentTime - payload.currentTime);
+          if (drift > 2) {
+            set((state) => ({
+              videoState: {
+                ...state.videoState,
+                currentTime: payload.currentTime,
+                isPlaying: payload.isPlaying,
+              },
+            }));
+          } else if (myState.isPlaying !== payload.isPlaying) {
+            set((state) => ({
+              videoState: { ...state.videoState, isPlaying: payload.isPlaying },
+            }));
+          }
+        },
+
         onUserKicked: ({ userId }) => {
           const currentUser = useAuthStore.getState().user;
           if (currentUser?.id === userId) {
@@ -401,7 +430,6 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
           const room = get().room;
           if (!room) return;
 
-          // Update participants based on who is actually present
           const updatedParticipants: Participant[] = users.map((u) => ({
             id: u.id,
             name: u.name,
@@ -419,6 +447,14 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
     );
 
     set({ isConnected: true });
+
+    // If host, start heartbeat to sync video position every 2s
+    if (isHost) {
+      realtimeRoomService.startHeartbeat(() => {
+        const vs = get().videoState;
+        return { currentTime: vs.currentTime, isPlaying: vs.isPlaying };
+      });
+    }
   },
 
   disconnectFromRoom: () => {

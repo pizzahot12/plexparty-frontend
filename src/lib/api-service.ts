@@ -171,9 +171,8 @@ export class ApiService {
   }
 
   async inviteToRoom(roomId: string, userId: string) {
-    return this.request<{ success: boolean }>(`/rooms/${roomId}/invite`, {
+    return this.request<{ success: boolean }>(`/rooms/${roomId}/invite/${userId}`, {
       method: 'POST',
-      body: JSON.stringify({ userId }),
     });
   }
 

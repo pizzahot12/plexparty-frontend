@@ -29,7 +29,6 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
   const { showSuccess, showError } = useNotifications();
   const [searchQuery, setSearchQuery] = useState('');
   const [invitedFriends, setInvitedFriends] = useState<string[]>([]);
-  const [isInviting, setIsInviting] = useState(false);
 
   const filteredFriends = onlineFriends.filter((f) =>
     f.name.toLowerCase().includes(searchQuery.toLowerCase()) &&

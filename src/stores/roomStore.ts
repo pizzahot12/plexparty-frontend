@@ -1,14 +1,24 @@
 import { create } from 'zustand';
 import type { Room, Participant, VideoState, VideoQuality } from '@/types';
 import { apiService } from '@/lib/api-service';
-import { webSocketService } from '@/lib/websocket-service';
+import { realtimeRoomService } from '@/lib/realtime-service';
+import type { PresenceState } from '@/lib/realtime-service';
 import { useAuthStore } from '@/stores/authStore';
+
+interface Message {
+  id: string;
+  userId: string;
+  userName: string;
+  text: string;
+  timestamp: string;
+  userAvatar?: string;
+}
 
 interface RoomState {
   room: Room | null;
   isHost: boolean;
   videoState: VideoState;
-  messages: { id: string; userId: string; userName: string; text: string; timestamp: string; userAvatar?: string }[];
+  messages: Message[];
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
@@ -47,7 +57,11 @@ interface RoomStore extends RoomState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
 
-  // WebSocket actions
+  // Realtime actions (replaces old WebSocket)
+  connectToRoom: (roomId: string) => void;
+  disconnectFromRoom: () => void;
+
+  // Keep old names as aliases for compatibility
   connectWebSocket: (roomId: string) => Promise<void>;
   disconnectWebSocket: () => void;
 }
@@ -83,7 +97,14 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
         mediaTitle,
         mediaPoster,
         hostId: currentUser?.id || '',
-        participants: [],
+        participants: currentUser ? [{
+          id: currentUser.id,
+          name: currentUser.name || currentUser.email || 'Host',
+          avatar: currentUser.avatar,
+          isHost: true,
+          isOnline: true,
+          isWatching: true,
+        }] : [],
         createdAt: new Date().toISOString(),
         isPrivate,
       };
@@ -95,8 +116,8 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
         messages: [],
       });
 
-      // Connect WebSocket
-      await get().connectWebSocket(result.roomId);
+      // Connect to Supabase Realtime channel
+      get().connectToRoom(result.roomId);
 
       return result.code;
     } catch (error) {
@@ -133,8 +154,8 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
         messages: [],
       });
 
-      // Connect WebSocket
-      await get().connectWebSocket(result.roomId);
+      // Connect to Supabase Realtime channel
+      get().connectToRoom(result.roomId);
 
       return true;
     } catch (error) {
@@ -144,7 +165,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
   },
 
   leaveRoom: () => {
-    get().disconnectWebSocket();
+    get().disconnectFromRoom();
     set({
       room: null,
       isHost: false,
@@ -204,15 +225,14 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
   },
 
   kickParticipant: async (userId) => {
-    const { isHost, room } = get();
-    if (!isHost || !room) return false;
-
+    const room = get().room;
+    if (!room) return false;
     try {
       await apiService.kickUser(room.id, userId);
+      realtimeRoomService.sendKickUser(userId);
       get().removeParticipant(userId);
       return true;
-    } catch (error) {
-      console.error('Error kicking participant:', error);
+    } catch {
       return false;
     }
   },
@@ -221,12 +241,6 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
     set((state) => ({
       videoState: { ...state.videoState, isPlaying },
     }));
-    // Sync with WebSocket
-    if (isPlaying) {
-      webSocketService.play(get().videoState.currentTime);
-    } else {
-      webSocketService.pause(get().videoState.currentTime);
-    }
   },
 
   setVideoTime: (currentTime) => {
@@ -267,6 +281,8 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
 
   addMessage: (message) => {
     const currentUser = useAuthStore.getState().user;
+
+    // Notification sound for messages from others
     if (currentUser && message.userId !== currentUser.id) {
       try {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -283,15 +299,15 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
           osc.start(ctx.currentTime);
           osc.stop(ctx.currentTime + 0.1);
         }
-      } catch (e) {
+      } catch {
         // Ignore auto-play errors
       }
     }
 
-    const newMessage = {
+    const newMessage: Message = {
       ...message,
       id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-      timestamp: new Date().toISOString(),
+      timestamp: message.timestamp || new Date().toISOString(),
     };
     set((state) => ({
       messages: [...state.messages, newMessage],
@@ -300,7 +316,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
 
   sendChatMessage: (text) => {
     if (!text.trim()) return;
-    webSocketService.sendMessage(text.trim());
+    realtimeRoomService.sendChatMessage(text.trim());
   },
 
   clearMessages: () => set({ messages: [] }),
@@ -309,88 +325,113 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
   setLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
 
-  connectWebSocket: async (roomId) => {
-    try {
-      webSocketService.clearHandlers();
-      await webSocketService.connect(roomId);
-      set({ isConnected: true });
+  // ── Supabase Realtime connection ───────────────────────────────────────
 
-      // Subscribe to WebSocket events
-      webSocketService.on('connection_established', () => {
-        set({ isConnected: true });
-      });
+  connectToRoom: (roomId) => {
+    const currentUser = useAuthStore.getState().user;
+    const isHost = get().isHost;
 
-      webSocketService.on('user_joined', () => {
-        // Refresh ONLY participant list via API (do NOT call joinRoom() — that would open another WS, causing an infinite loop)
-        const code = get().room?.code;
-        if (code) {
-          apiService.getRoomByCode(code).then((result) => {
-            const participants = [
-              { ...result.host, isHost: true, isOnline: result.host.isOnline ?? true, isWatching: result.host.isWatching },
-              ...result.participants.map((p) => ({ ...p, isHost: false, isOnline: p.isOnline ?? true, isWatching: p.isWatching })),
-            ];
-            set((state) => ({
-              room: state.room ? { ...state.room, participants } : state.room,
-            }));
-          }).catch(() => { });
-        }
-      });
-
-      webSocketService.on('user_left', (event) => {
-        const userId = event.userId as string;
-        get().updateParticipant(userId, { isOnline: false });
-      });
-
-      webSocketService.on('play', (event) => {
-        set((state) => ({
-          videoState: { ...state.videoState, isPlaying: true, currentTime: (event.currentTime as number) || state.videoState.currentTime },
-        }));
-      });
-
-      webSocketService.on('pause', (event) => {
-        set((state) => ({
-          videoState: { ...state.videoState, isPlaying: false, currentTime: (event.currentTime as number) || state.videoState.currentTime },
-        }));
-      });
-
-      webSocketService.on('seek', (event) => {
-        set((state) => ({
-          videoState: { ...state.videoState, currentTime: (event.currentTime as number) || state.videoState.currentTime },
-        }));
-      });
-
-      webSocketService.on('chat_message', (event) => {
-        const msg = event as unknown as { userId: string; userName: string; text: string; userAvatar?: string };
-        get().addMessage({
-          userId: msg.userId,
-          userName: msg.userName,
-          text: msg.text,
-          userAvatar: msg.userAvatar,
-        });
-      });
-
-      webSocketService.on('user_kicked', (event) => {
-        const currentUser = useAuthStore.getState().user;
-        const kickedUserId = event.userId as string;
-        if (currentUser?.id === kickedUserId) {
-          // Current user was kicked
-          get().leaveRoom();
-        } else {
-          get().removeParticipant(kickedUserId);
-        }
-      });
-
-      webSocketService.on('room_closed', () => {
-        get().leaveRoom();
-      });
-    } catch (error) {
-      console.error('WebSocket connection error:', error);
-      set({ isConnected: false, error: 'Error de conexión en tiempo real' });
+    if (!currentUser) {
+      console.error('[RoomStore] No user available for Realtime connection');
+      return;
     }
+
+    realtimeRoomService.join(
+      roomId,
+      {
+        id: currentUser.id,
+        name: currentUser.name || currentUser.email || 'Anon',
+        avatar: currentUser.avatar,
+        isHost,
+      },
+      {
+        onChatMessage: (payload) => {
+          get().addMessage({
+            userId: payload.userId,
+            userName: payload.userName,
+            text: payload.text,
+            userAvatar: payload.userAvatar,
+            timestamp: payload.timestamp,
+          } as any);
+        },
+
+        onPlay: (payload) => {
+          set((state) => ({
+            videoState: {
+              ...state.videoState,
+              isPlaying: true,
+              currentTime: payload.currentTime || state.videoState.currentTime,
+            },
+          }));
+        },
+
+        onPause: (payload) => {
+          set((state) => ({
+            videoState: {
+              ...state.videoState,
+              isPlaying: false,
+              currentTime: payload.currentTime || state.videoState.currentTime,
+            },
+          }));
+        },
+
+        onSeek: (payload) => {
+          set((state) => ({
+            videoState: {
+              ...state.videoState,
+              currentTime: payload.currentTime || state.videoState.currentTime,
+            },
+          }));
+        },
+
+        onUserKicked: ({ userId }) => {
+          const currentUser = useAuthStore.getState().user;
+          if (currentUser?.id === userId) {
+            get().leaveRoom();
+          } else {
+            get().removeParticipant(userId);
+          }
+        },
+
+        onRoomClosed: () => {
+          get().leaveRoom();
+        },
+
+        onPresenceSync: (users: PresenceState[]) => {
+          const room = get().room;
+          if (!room) return;
+
+          // Update participants based on who is actually present
+          const updatedParticipants: Participant[] = users.map((u) => ({
+            id: u.id,
+            name: u.name,
+            avatar: u.avatar,
+            isHost: u.isHost || u.id === room.hostId,
+            isOnline: true,
+            isWatching: true,
+          }));
+
+          set((state) => ({
+            room: state.room ? { ...state.room, participants: updatedParticipants } : state.room,
+          }));
+        },
+      }
+    );
+
+    set({ isConnected: true });
+  },
+
+  disconnectFromRoom: () => {
+    realtimeRoomService.leave();
+    set({ isConnected: false });
+  },
+
+  // Aliases for backward compatibility with WatchPage, VideoPlayer, etc.
+  connectWebSocket: async (roomId) => {
+    get().connectToRoom(roomId);
   },
 
   disconnectWebSocket: () => {
-    webSocketService.disconnect();
-    set({ isConnected: false });
+    get().disconnectFromRoom();
   },
 }));

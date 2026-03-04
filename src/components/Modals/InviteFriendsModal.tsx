@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useFriends } from '@/hooks/useFriends';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useRooms } from '@/hooks/useRooms';
+import { apiService } from '@/lib/api-service';
 import { Button } from '@/components/Common/Button';
 import {
   Dialog,
@@ -23,18 +25,29 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
   roomCode,
 }) => {
   const { onlineFriends } = useFriends();
-  const { showSuccess } = useNotifications();
+  const { room } = useRooms();
+  const { showSuccess, showError } = useNotifications();
   const [searchQuery, setSearchQuery] = useState('');
   const [invitedFriends, setInvitedFriends] = useState<string[]>([]);
+  const [isInviting, setIsInviting] = useState(false);
 
   const filteredFriends = onlineFriends.filter((f) =>
     f.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
     !invitedFriends.includes(f.id)
   );
 
-  const handleInvite = (friendId: string, friendName: string) => {
-    setInvitedFriends((prev) => [...prev, friendId]);
-    showSuccess('Invitación enviada', `Invitaste a ${friendName}`);
+  const handleInvite = async (friendId: string, friendName: string) => {
+    if (!room) return;
+    setIsInviting(true);
+    try {
+      await apiService.inviteToRoom(room.id, friendId);
+      setInvitedFriends((prev) => [...prev, friendId]);
+      showSuccess('Invitación enviada', `Invitaste a ${friendName}`);
+    } catch (e: any) {
+      showError('Error', e.message || 'No se pudo enviar la invitación');
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   const handleCopyLink = () => {

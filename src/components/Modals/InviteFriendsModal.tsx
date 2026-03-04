@@ -38,15 +38,12 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
 
   const handleInvite = async (friendId: string, friendName: string) => {
     if (!room) return;
-    setIsInviting(true);
     try {
       await apiService.inviteToRoom(room.id, friendId);
       setInvitedFriends((prev) => [...prev, friendId]);
       showSuccess('Invitación enviada', `Invitaste a ${friendName}`);
     } catch (e: any) {
       showError('Error', e.message || 'No se pudo enviar la invitación');
-    } finally {
-      setIsInviting(false);
     }
   };
 

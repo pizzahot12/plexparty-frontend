@@ -54,8 +54,21 @@ const WatchPage: React.FC = () => {
 
     return () => {
       leaveRoom();
+      // Clear watching status from global presence
+      import('@/lib/global-presence').then(({ globalPresenceService }) => {
+        globalPresenceService.setWatching(undefined, undefined);
+      });
     };
   }, [roomId]);
+
+  // Update global presence when room loads
+  useEffect(() => {
+    if (room) {
+      import('@/lib/global-presence').then(({ globalPresenceService }) => {
+        globalPresenceService.setWatching(room.name || 'Sala', room.code);
+      });
+    }
+  }, [room?.id]);
 
   const media = room?.mediaId ? getMediaById(room.mediaId) : null;
 

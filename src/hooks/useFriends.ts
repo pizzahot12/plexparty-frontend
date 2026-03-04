@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import type { Friend } from '@/types';
 import { apiService } from '@/lib/api-service';
 import { useAuthStore } from '@/stores/authStore';
+import { globalPresenceService, type UserPresence } from '@/lib/global-presence';
 
 export interface FriendRequest {
   id: string;
@@ -15,6 +16,7 @@ export const useFriends = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const currentUser = useAuthStore((state) => state.user);
+  const [onlineUserMap, setOnlineUserMap] = useState<Record<string, UserPresence>>({});
 
   // Load friends from API
   const loadFriends = useCallback(async () => {
@@ -29,6 +31,7 @@ export const useFriends = () => {
         isOnline: f.status === 'online',
         isWatching: !!f.watching,
         currentMedia: f.watching,
+        roomCode: f.roomCode,
       }));
       setFriends(formattedFriends);
     } catch (err) {
@@ -61,14 +64,49 @@ export const useFriends = () => {
     loadRequests();
   }, [isAuthenticated, loadFriends, loadRequests]);
 
-  const onlineFriends = friends.filter((f) => f.isOnline);
-  const offlineFriends = friends.filter((f) => !f.isOnline);
-  const watchingFriends = friends.filter((f) => f.isOnline && f.isWatching);
+  // Subscribe to global presence updates
+  useEffect(() => {
+    const handlePresenceUpdate = (users: UserPresence[]) => {
+      const map: Record<string, UserPresence> = {};
+      for (const u of users) {
+        map[u.id] = u;
+      }
+      setOnlineUserMap(map);
+    };
+
+    globalPresenceService.onPresenceSync(handlePresenceUpdate);
+    // Get initial snapshot
+    const initial = globalPresenceService.getOnlineUsers();
+    if (initial.length > 0) {
+      const map: Record<string, UserPresence> = {};
+      for (const u of initial) map[u.id] = u;
+      setOnlineUserMap(map);
+    }
+  }, []);
+
+  // Merge friends with real-time presence data
+  const enrichedFriends: Friend[] = friends.map((f) => {
+    const presence = onlineUserMap[f.id];
+    if (presence) {
+      return {
+        ...f,
+        isOnline: true,
+        isWatching: !!presence.watching,
+        currentMedia: presence.watching || f.currentMedia,
+        roomCode: presence.roomCode || f.roomCode,
+      };
+    }
+    return { ...f, isOnline: false, isWatching: false };
+  });
+
+  const onlineFriends = enrichedFriends.filter((f) => f.isOnline);
+  const offlineFriends = enrichedFriends.filter((f) => !f.isOnline);
+  const watchingFriends = enrichedFriends.filter((f) => f.isOnline && f.isWatching);
 
   const addFriend = useCallback(async (userId: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       await apiService.sendFriendRequest(userId);
       await loadFriends();
@@ -106,8 +144,8 @@ export const useFriends = () => {
   }, []);
 
   const getFriendById = useCallback((id: string) => {
-    return friends.find((f) => f.id === id);
-  }, [friends]);
+    return enrichedFriends.find((f) => f.id === id);
+  }, [enrichedFriends]);
 
   const updateFriendStatus = useCallback((friendId: string, isOnline: boolean) => {
     setFriends((prev) =>
@@ -124,8 +162,8 @@ export const useFriends = () => {
   }, []);
 
   return {
-    // Data
-    friends,
+    // Data — use enriched friends with real-time presence
+    friends: enrichedFriends,
     requests,
     onlineFriends,
     offlineFriends,
@@ -133,7 +171,7 @@ export const useFriends = () => {
     isLoading,
     error,
     currentUser,
-    
+
     // Actions
     addFriend,
     removeFriend,

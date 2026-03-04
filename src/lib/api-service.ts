@@ -185,6 +185,7 @@ export class ApiService {
       avatar?: string;
       status: 'online' | 'offline';
       watching?: string;
+      roomCode?: string;
     }>>('/friends');
   }
 

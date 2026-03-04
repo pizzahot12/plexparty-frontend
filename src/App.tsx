@@ -196,11 +196,26 @@ const AppRoutes: React.FC = () => {
 
 const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const initSession = useAuthStore((s) => s.initSession);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     initSession().finally(() => setReady(true));
   }, [initSession]);
+
+  // Start/stop global presence tracking based on auth state
+  useEffect(() => {
+    if (isAuthenticated && ready) {
+      import('@/lib/global-presence').then(({ globalPresenceService }) => {
+        globalPresenceService.start();
+      });
+    }
+    return () => {
+      import('@/lib/global-presence').then(({ globalPresenceService }) => {
+        globalPresenceService.stop();
+      });
+    };
+  }, [isAuthenticated, ready]);
 
   if (!ready) {
     return <PageLoader />;

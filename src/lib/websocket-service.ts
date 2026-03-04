@@ -51,6 +51,25 @@ export class WebSocketService {
   }
 
   connect(roomId: string): Promise<void> {
+    // ── 1. Neutralize any existing socket so stale callbacks never fire ──────
+    if (this.ws) {
+      const stale = this.ws;
+      stale.onopen = null;
+      stale.onmessage = null;
+      stale.onerror = null;
+      stale.onclose = null; // prevents stale onclose from triggering attemptReconnect
+      if (stale.readyState === WebSocket.OPEN || stale.readyState === WebSocket.CONNECTING) {
+        stale.close();
+      }
+      this.ws = null;
+    }
+
+    // ── 2. Cancel any pending reconnect timer ────────────────────────────────
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
     return new Promise((resolve, reject) => {
       const token = useAuthStore.getState().token;
 
@@ -62,15 +81,18 @@ export class WebSocketService {
       this.roomId = roomId;
       const wsUrl = `${WS_BASE_URL}/ws/rooms/${roomId}?token=${token}`;
 
-      this.ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(wsUrl);
+      this.ws = ws;
 
-      this.ws.onopen = () => {
+      ws.onopen = () => {
+        if (this.ws !== ws) return; // stale — another connect() was called mid-flight
         console.log('WebSocket connected');
         this.reconnectAttempts = 0;
         resolve();
       };
 
-      this.ws.onmessage = (event) => {
+      ws.onmessage = (event) => {
+        if (this.ws !== ws) return; // stale
         try {
           const data = JSON.parse(event.data) as WebSocketEvent;
           this.handleEvent(data);
@@ -79,12 +101,14 @@ export class WebSocketService {
         }
       };
 
-      this.ws.onerror = (error) => {
+      ws.onerror = (error) => {
+        if (this.ws !== ws) return; // stale
         console.error('WebSocket error:', error);
         reject(error);
       };
 
-      this.ws.onclose = () => {
+      ws.onclose = () => {
+        if (this.ws !== ws) return; // stale — don't reconnect for an evicted socket
         console.log('WebSocket disconnected');
         this.attemptReconnect();
       };

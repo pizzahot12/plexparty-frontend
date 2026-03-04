@@ -290,7 +290,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
 
     const newMessage = {
       ...message,
-      id: `msg-${Date.now()}`,
+      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
       timestamp: new Date().toISOString(),
     };
     set((state) => ({

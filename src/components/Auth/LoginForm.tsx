@@ -6,6 +6,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { Button } from '@/components/Common/Button';
 import { Input } from '@/components/Common/Input';
 import { Mail, Lock, Film, ArrowRight } from 'lucide-react';
+import { GoogleButton } from './GoogleButton';
 
 interface LoginFormProps {
   className?: string;

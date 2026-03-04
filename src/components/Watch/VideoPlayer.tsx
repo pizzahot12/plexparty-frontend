@@ -5,7 +5,6 @@ import { useRooms } from '@/hooks/useRooms';
 import { useAuth } from '@/hooks/useAuth';
 import { realtimeRoomService } from '@/lib/realtime-service';
 import { API_BASE_URL } from '@/lib/constants';
-import { useAuthStore } from '@/stores/authStore';
 import {
   Play,
   Pause,
@@ -171,7 +170,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const savedTimeRef = useRef(0);
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const {
     videoState,
     setVideoPlaying,
@@ -257,7 +256,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       });
 
       hlsRef.current = hls;
-      hls.loadSource(url);
+      hls.loadSource(hlsUrl);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -280,7 +279,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       });
 
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = url;
+      video.src = hlsUrl;
       video.onloadedmetadata = () => setBuffering(false);
     } else {
       setError('Tu navegador no soporta reproducción HLS.');

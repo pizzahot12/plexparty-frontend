@@ -76,7 +76,11 @@ export const useAuthStore = create<AuthStore>()(
           return { success: true };
         } catch (error) {
           set({ isLoading: false });
-          return { success: false, error: (error as Error).message };
+          const errorMessage = (error as Error).message;
+          if (errorMessage.includes('lista de espera') || errorMessage.includes('PENDING_APPROVAL')) {
+            return { success: false, isPending: true, error: errorMessage };
+          }
+          return { success: false, error: errorMessage };
         }
       },
 
@@ -130,7 +134,11 @@ export const useAuthStore = create<AuthStore>()(
           return { success: true };
         } catch (error) {
           set({ isLoading: false });
-          return { success: false, error: (error as Error).message };
+          const errorMessage = (error as Error).message;
+          if (errorMessage.includes('lista de espera') || errorMessage.includes('PENDING_APPROVAL')) {
+            return { success: false, isPending: true, error: errorMessage };
+          }
+          return { success: false, error: errorMessage };
         }
       },
 

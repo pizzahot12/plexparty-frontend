@@ -20,6 +20,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [waitlistError, setWaitlistError] = useState(false);
 
   const validate = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
@@ -48,6 +49,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
     const result = await login(email, password);
     if (result.success) {
       navigate('/');
+    } else if (result.isPending) {
+      setWaitlistError(true);
     } else {
       const msg = result.error === 'Invalid login credentials'
         ? 'Email o contrasena incorrectos'
@@ -55,6 +58,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       showError('Error de inicio de sesion', msg);
     }
   };
+
+  if (waitlistError) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
+        <h1 className="text-3xl font-bold text-white mb-4">¡Estás en la Lista de Espera!</h1>
+        <p className="text-white/70 max-w-md mx-auto mb-8">
+          Hemos recibido tu solicitud. Actualmente, PlexParty requiere aprobación del administrador.
+          Por favor, espera a que tu cuenta sea aprobada para poder iniciar sesión.
+        </p>
+        <Button onClick={() => setWaitlistError(false)} variant="primary">
+          Volver
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className={cn('w-full max-w-md mx-auto', className)}>

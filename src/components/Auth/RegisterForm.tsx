@@ -22,6 +22,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ className }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [waitlistError, setWaitlistError] = useState(false);
   const [errors, setErrors] = useState<{
     name?: string;
     email?: string;
@@ -72,6 +73,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ className }) => {
     if (result.success) {
       showSuccess('Cuenta creada', 'Bienvenido a PlexParty');
       navigate('/');
+    } else if (result.isPending) {
+      setWaitlistError(true);
     } else {
       const msg = result.error === 'User already registered'
         ? 'Este email ya esta registrado'
@@ -79,6 +82,21 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ className }) => {
       showError('Error al registrarse', msg);
     }
   };
+
+  if (waitlistError) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
+        <h1 className="text-3xl font-bold text-white mb-4">¡Estás en la Lista de Espera!</h1>
+        <p className="text-white/70 max-w-md mx-auto mb-8">
+          Hemos recibido tu solicitud de registro con éxito. Actualmente, PlexParty requiere aprobación del administrador.
+          Por favor, espera a que tu cuenta sea aprobada para poder iniciar sesión.
+        </p>
+        <Button onClick={() => navigate('/login')} variant="primary">
+          Ir al Inicio de Sesión
+        </Button>
+      </div>
+    );
+  }
 
   const passwordStrength = (pass: string): { strength: number; label: string } => {
     let strength = 0;

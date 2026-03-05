@@ -107,12 +107,6 @@ function buildHlsUrl(
     params.AudioStreamIndex = String(audioIndex);
   }
 
-  // Subtitles burned-in (SubtitleMethod=Encode = burned into video stream)
-  if (subtitleIndex !== undefined && subtitleIndex >= 0) {
-    params.SubtitleStreamIndex = String(subtitleIndex);
-    params.SubtitleMethod = 'Encode';
-  }
-
   const qs = new URLSearchParams(params).toString();
   return `${PROXY_URL}/Videos/${mediaId}/master.m3u8?${qs}`;
 }
@@ -233,6 +227,40 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     });
   }, [mediaId, token]);
 
+  // ── Subtitle track logic ───────────────────────────────────────────────────
+  const [subtitleUrl, setSubtitleUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedSubtitle < 0 || !mediaId || !token) {
+      setSubtitleUrl(null);
+      return;
+    }
+
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/media/${mediaId}/subtitle/${selectedSubtitle}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Failed to fetch subtitle');
+        const vttText = await res.text();
+        const blob = new Blob([vttText], { type: 'text/vtt' });
+        const objUrl = URL.createObjectURL(blob);
+        if (active) setSubtitleUrl(objUrl);
+      } catch (e) {
+        console.error('Error fetching VTT:', e);
+      }
+    })();
+    return () => { active = false; };
+  }, [mediaId, selectedSubtitle, token]);
+
+  // Clean up object URLs
+  useEffect(() => {
+    return () => {
+      if (subtitleUrl) URL.revokeObjectURL(subtitleUrl);
+    };
+  }, [subtitleUrl]);
+
   // ── Load / reload HLS when mediaId or settings change ────────────────────────
   const loadHls = useCallback((mid: string, quality: QualityLevel, audio?: number, subtitle?: number) => {
     const video = videoRef.current;
@@ -330,10 +358,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // ── Subtitle change ───────────────────────────────────────────────────────────
   const applySubtitle = (index: number) => {
     if (!mediaId) return;
-    savedTimeRef.current = videoRef.current?.currentTime ?? 0;
     setSelectedSubtitle(index);
     setShowSettings(false);
-    loadHls(mediaId, selectedQuality, selectedAudio, index);
   };
 
   // ── Sync play/pause from room state ──────────────────────────────────────────
@@ -625,7 +651,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onClick={() => { if (showSettings) { setShowSettings(false); return; } togglePlay(); }}
         className="w-full h-full object-contain"
         playsInline
-      />
+        crossOrigin="anonymous"
+      >
+        {subtitleUrl && (
+          <track
+            src={subtitleUrl}
+            kind="subtitles"
+            srcLang="es"
+            label="Subtitle"
+            default
+          />
+        )}
+      </video>
 
       {/* ── Buffering spinner ── */}
       {buffering && (

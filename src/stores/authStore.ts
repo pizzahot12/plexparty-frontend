@@ -4,9 +4,9 @@ import { apiService } from '@/lib/api-service';
 import type { User, AuthState } from '@/types';
 
 interface AuthStore extends AuthState {
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; isPending?: boolean }>;
   googleLogin: (accessToken: string) => Promise<{ success: boolean; error?: string; isPending?: boolean }>;
-  register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string; isPending?: boolean }>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;

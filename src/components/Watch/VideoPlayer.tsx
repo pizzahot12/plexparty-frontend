@@ -79,8 +79,7 @@ function buildHlsUrl(
   mediaId: string,
   quality: QualityLevel,
   sessionId: string,
-  audioIndex?: number,
-  subtitleIndex?: number
+  audioIndex?: number
 ): string {
   const params: Record<string, string> = {
     MediaSourceId: mediaId,

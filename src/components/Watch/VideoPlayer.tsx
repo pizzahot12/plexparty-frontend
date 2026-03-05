@@ -261,7 +261,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, [subtitleUrl]);
 
   // ── Load / reload HLS when mediaId or settings change ────────────────────────
-  const loadHls = useCallback((mid: string, quality: QualityLevel, audio?: number, subtitle?: number) => {
+  const loadHls = useCallback((mid: string, quality: QualityLevel, audio?: number) => {
     const video = videoRef.current;
     if (!video || !token) return; // Ensure token is available
 
@@ -328,7 +328,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   useEffect(() => {
     if (!mediaId) return;
     savedTimeRef.current = 0;
-    loadHls(mediaId, selectedQuality, selectedAudio, selectedSubtitle);
+    loadHls(mediaId, selectedQuality, selectedAudio);
     return () => {
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     };
@@ -341,7 +341,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     savedTimeRef.current = videoRef.current?.currentTime ?? 0;
     setSelectedQuality(q);
     setShowSettings(false);
-    loadHls(mediaId, q, selectedAudio, selectedSubtitle);
+    loadHls(mediaId, q, selectedAudio);
   };
 
   // ── Audio change ──────────────────────────────────────────────────────────────
@@ -350,7 +350,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     savedTimeRef.current = videoRef.current?.currentTime ?? 0;
     setSelectedAudio(index);
     setShowSettings(false);
-    loadHls(mediaId, selectedQuality, index, selectedSubtitle);
+    loadHls(mediaId, selectedQuality, index);
   };
 
   // ── Subtitle change ───────────────────────────────────────────────────────────

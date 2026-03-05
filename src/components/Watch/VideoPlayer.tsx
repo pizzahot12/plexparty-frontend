@@ -273,8 +273,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       hlsRef.current = null;
     }
 
-    const subIdx = subtitle ?? -1;
-    const hlsUrl = buildHlsUrl(mid, quality, playSessionId.current, audio, subIdx >= 0 ? subIdx : undefined);
+    const hlsUrl = buildHlsUrl(mid, quality, playSessionId.current, audio);
 
     if (Hls.isSupported()) {
       const hls = new Hls({

@@ -710,8 +710,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             onLoad={(e) => {
               const trackEl = e.target as HTMLTrackElement;
               const videoEl = trackEl.parentElement as HTMLVideoElement;
-              const trackInfo = videoEl.textTracks?.[0];
-              if (trackInfo) trackInfo.mode = 'showing';
+              if (!videoEl || !videoEl.textTracks) return;
+              for (let i = 0; i < videoEl.textTracks.length; i++) {
+                const track = videoEl.textTracks[i];
+                if (track.label === 'Subtitle' || track.language === 'es') {
+                  track.mode = 'showing';
+                }
+              }
             }}
           />
         )}

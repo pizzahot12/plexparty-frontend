@@ -150,7 +150,36 @@
   }
 }
 
-/* Keyframes */
+/* ── Hero Carousel Animations ────────────────────────────────────────── */
+
+/* Ken Burns: slow zoom-in on active image */
+@keyframes kenburns {
+  0%   { transform: scale(1)    translate(0%,    0%);    }
+  100% { transform: scale(1.07) translate(-1.5%, -1%);   }
+}
+
+.hero-kenburns {
+  animation: kenburns 8s ease-out forwards;
+  will-change: transform;
+}
+
+/* Outgoing slide: subtle zoom-out + fade */
+@keyframes heroSlideOut {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(1.04); }
+}
+
+/* Content: slide up + fade in on each slide change */
+@keyframes heroContentIn {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.hero-content-in {
+  animation: heroContentIn 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ── General Keyframes ─────────────────────────────────────────────────*/
 @keyframes animate-in {
   from {
     opacity: 0;

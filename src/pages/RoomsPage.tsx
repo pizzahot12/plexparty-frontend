@@ -131,32 +131,46 @@ const RoomsPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Add Room button */}
-              <button
-                onClick={() => navigate('/movies')}
-                className="flex items-center gap-2 px-4 py-2 bg-[#ff6b35] text-white rounded-xl hover:bg-[#ff8555] transition-colors"
-              >
-                <Play className="w-4 h-4 fill-white" />
-                <span className="hidden sm:inline text-sm font-medium">Crear sala</span>
-              </button>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              {/* Top row: actions */}
+              <div className="flex items-center gap-2">
+                {/* Add Room button */}
+                <button
+                  onClick={() => navigate('/movies')}
+                  className="flex items-center gap-2 px-4 py-2.5 min-h-11 bg-[#ff6b35] text-white rounded-xl hover:bg-[#ff8555] transition-colors touch-manipulation"
+                >
+                  <Play className="w-4 h-4 fill-white" />
+                  <span className="text-sm font-medium">Crear sala</span>
+                </button>
 
-              {/* Refresh button */}
-              <button
-                onClick={fetchRooms}
-                disabled={isLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-white/5 text-white/70 rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
-                <span className="hidden sm:inline text-sm">Actualizar</span>
-              </button>
+                {/* Refresh button */}
+                <button
+                  onClick={fetchRooms}
+                  disabled={isLoading}
+                  className="flex items-center gap-2 px-3 py-2.5 min-h-11 bg-white/5 text-white/70 rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50 touch-manipulation"
+                >
+                  <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
+                  <span className="hidden sm:inline text-sm">Actualizar</span>
+                </button>
+
+                {/* Close all button */}
+                {myRoomsCount > 0 && (
+                  <button
+                    onClick={handleCloseAllRooms}
+                    className="flex items-center gap-2 px-3 py-2.5 min-h-11 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-colors touch-manipulation"
+                  >
+                    <Power className="w-4 h-4" />
+                    <span className="hidden sm:inline text-sm">Cerrar todas</span>
+                  </button>
+                )}
+              </div>
 
               {/* Filter tabs */}
-              <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-1">
+              <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-1 self-start sm:self-auto">
                 <button
                   onClick={() => setFilter('all')}
                   className={cn(
-                    'px-3 py-1.5 rounded-lg text-sm transition-colors',
+                    'px-3 py-2 min-h-9 rounded-lg text-sm transition-colors touch-manipulation',
                     filter === 'all'
                       ? 'bg-[#ff6b35] text-white'
                       : 'text-white/50 hover:text-white'
@@ -167,7 +181,7 @@ const RoomsPage: React.FC = () => {
                 <button
                   onClick={() => setFilter('mine')}
                   className={cn(
-                    'px-3 py-1.5 rounded-lg text-sm transition-colors',
+                    'px-3 py-2 min-h-9 rounded-lg text-sm transition-colors touch-manipulation',
                     filter === 'mine'
                       ? 'bg-[#ff6b35] text-white'
                       : 'text-white/50 hover:text-white'
@@ -178,7 +192,7 @@ const RoomsPage: React.FC = () => {
                 <button
                   onClick={() => setFilter('public')}
                   className={cn(
-                    'px-3 py-1.5 rounded-lg text-sm transition-colors',
+                    'px-3 py-2 min-h-9 rounded-lg text-sm transition-colors touch-manipulation',
                     filter === 'public'
                       ? 'bg-[#ff6b35] text-white'
                       : 'text-white/50 hover:text-white'
@@ -187,17 +201,6 @@ const RoomsPage: React.FC = () => {
                   Públicas
                 </button>
               </div>
-
-              {/* Close all button */}
-              {myRoomsCount > 0 && (
-                <button
-                  onClick={handleCloseAllRooms}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-colors"
-                >
-                  <Power className="w-4 h-4" />
-                  <span className="hidden sm:inline text-sm">Cerrar todas</span>
-                </button>
-              )}
             </div>
           </div>
         </div>

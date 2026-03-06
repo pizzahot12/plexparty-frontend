@@ -518,7 +518,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // ── Settings panel JSX (inline to prevent remount flashing) ──────────────────
   const settingsPanelContent = (
-    <div className="absolute bottom-16 right-4 w-56 bg-[#1e1e1e]/95 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden shadow-2xl z-30">
+    <div className="absolute bottom-16 right-4 w-56 bg-[#1e1e1e]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl z-30 max-h-[calc(100%-80px)] overflow-y-auto">
 
       {/* ── main menu ── */}
       {settingsMenu === 'main' && (
@@ -686,8 +686,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         {/* Progress bar */}
         <div className="px-4 pb-2 pointer-events-auto">
           <input type="range" min={0} max={duration || 100} value={currentTime} onChange={handleSeek}
-            className="w-full h-1 bg-white/30 rounded-full appearance-none cursor-pointer
-              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+            className="w-full h-1.5 bg-white/30 rounded-full appearance-none cursor-pointer touch-manipulation
+              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
               [&::-webkit-slider-thumb]:bg-[#ff6b35] [&::-webkit-slider-thumb]:rounded-full
               hover:[&::-webkit-slider-thumb]:scale-125 transition-transform" />
           <div className="flex justify-between text-xs text-white/70 mt-1">
@@ -697,7 +697,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
 
         {/* Button row */}
-        <div className="flex items-center justify-between px-4 pb-4 pb-[max(1rem,env(safe-area-inset-bottom))] pointer-events-auto">
+        <div className="flex items-center justify-between px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pointer-events-auto">
           <div className="flex items-center gap-1">
             <button onClick={togglePlay}
               className="min-w-11 min-h-11 flex items-center justify-center text-white hover:text-[#ff6b35] transition-colors touch-manipulation">
@@ -717,10 +717,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 {volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
               </button>
               <input type="range" min={0} max={1} step={0.05} value={volume} onChange={handleVolumeChange}
-                className="w-0 group-hover/volume:w-20 h-1 bg-white/30 rounded-full appearance-none cursor-pointer
+                className="w-16 sm:w-0 sm:group-hover/volume:w-20 h-1 bg-white/30 rounded-full appearance-none cursor-pointer touch-manipulation
                   transition-all duration-200 overflow-hidden
-                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5
-                  [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full" />
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
+                  [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full" />
             </div>
           </div>
 

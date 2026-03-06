@@ -169,15 +169,15 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
           <>
             <button
               onClick={prevSlide}
-              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-12 sm:h-12 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/50 transition-colors"
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 min-w-11 min-h-11 sm:w-12 sm:h-12 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/50 transition-colors touch-manipulation"
             >
-              <ChevronLeft className="w-4 h-4 sm:w-6 sm:h-6" />
+              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
             <button
               onClick={nextSlide}
-              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-12 sm:h-12 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/50 transition-colors"
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 min-w-11 min-h-11 sm:w-12 sm:h-12 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/50 transition-colors touch-manipulation"
             >
-              <ChevronRight className="w-4 h-4 sm:w-6 sm:h-6" />
+              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </>
         )}
@@ -190,7 +190,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
                 key={index}
                 onClick={() => goToSlide(index)}
                 className="relative h-1 rounded-full overflow-hidden bg-white/20 transition-all duration-300"
-                style={{ width: index === currentIndex ? '32px sm:48px' : '16px sm:24px' }}
+                style={{ width: index === currentIndex ? '32px' : '16px' }}
               >
                 {index === currentIndex && (
                   <div

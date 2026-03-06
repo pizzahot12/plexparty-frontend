@@ -179,10 +179,10 @@ export const MediaCard: React.FC<MediaCardProps> = ({
           onLoad={() => setImageLoaded(true)}
         />
         
-        {/* Hover overlay */}
+        {/* Hover/touch overlay — always visible on mobile, hover on desktop */}
         <div className={cn(
           'absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent transition-opacity duration-300',
-          isHovered ? 'opacity-100' : 'opacity-0'
+          isHovered ? 'opacity-100' : 'opacity-0 sm:opacity-0 max-sm:opacity-100'
         )}>
           <div className="absolute inset-0 flex flex-col justify-end p-3">
             <div className="flex items-center gap-2 mb-2">

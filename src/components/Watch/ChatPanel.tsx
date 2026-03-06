@@ -34,9 +34,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     }
   };
 
-  // Auto-focus input when panel opens
+  // Auto-focus input when panel opens (desktop only — on mobile would trigger keyboard)
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isOpen && inputRef.current && window.innerWidth >= 1024) {
       inputRef.current.focus();
     }
   }, [isOpen]);

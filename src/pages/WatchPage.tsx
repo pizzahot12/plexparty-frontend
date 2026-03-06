@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMedia } from '@/hooks/useMedia';
 import { Loading } from '@/components/Common/Loading';
 import { Button } from '@/components/Common/Button';
-import { ArrowLeft, MessageSquare, Users, Crown, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Users, Crown, X } from 'lucide-react';
 
 import { apiService } from '@/lib/api-service';
 
@@ -27,7 +27,6 @@ const WatchPage: React.FC = () => {
   const [showParticipants, setShowParticipants] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<'none' | 'chat' | 'participants' | 'admin'>('none');
-  const [isPanelExpanded, setIsPanelExpanded] = useState(false);
 
   // Sync progress every 10 seconds
   useEffect(() => {
@@ -99,7 +98,7 @@ const WatchPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-black flex flex-col">
+    <div className="flex flex-col h-[100dvh] bg-black">
       {/* Header */}
       <header className="h-14 bg-[#1a1a1a] border-b border-white/10 flex items-center justify-between px-4 flex-shrink-0">
         <div className="flex items-center gap-4">
@@ -163,7 +162,7 @@ const WatchPage: React.FC = () => {
           <button
             onClick={() => setMobilePanel(mobilePanel === 'chat' ? 'none' : 'chat')}
             className={cn(
-              'p-2 rounded-lg transition-colors',
+              'min-h-11 min-w-11 flex items-center justify-center rounded-lg transition-colors touch-manipulation',
               mobilePanel === 'chat'
                 ? 'bg-[#ff6b35] text-white'
                 : 'text-white/70 hover:text-white hover:bg-white/10'
@@ -174,7 +173,7 @@ const WatchPage: React.FC = () => {
           <button
             onClick={() => setMobilePanel(mobilePanel === 'participants' ? 'none' : 'participants')}
             className={cn(
-              'p-2 rounded-lg transition-colors',
+              'min-h-11 min-w-11 flex items-center justify-center rounded-lg transition-colors touch-manipulation',
               mobilePanel === 'participants'
                 ? 'bg-[#ff6b35] text-white'
                 : 'text-white/70 hover:text-white hover:bg-white/10'
@@ -186,7 +185,7 @@ const WatchPage: React.FC = () => {
             <button
               onClick={() => setMobilePanel(mobilePanel === 'admin' ? 'none' : 'admin')}
               className={cn(
-                'p-2 rounded-lg transition-colors',
+                'min-h-11 min-w-11 flex items-center justify-center rounded-lg transition-colors touch-manipulation',
                 mobilePanel === 'admin'
                   ? 'bg-yellow-500 text-white'
                   : 'text-white/70 hover:text-white hover:bg-white/10'
@@ -199,12 +198,10 @@ const WatchPage: React.FC = () => {
       </header>
 
       {/* Main content */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Video player - takes full width on mobile when panel is closed */}
-        <div className={cn(
-          'flex-1 transition-all duration-300',
-          mobilePanel !== 'none' ? (isPanelExpanded ? 'h-[20vh] lg:h-full lg:flex-1' : 'h-[60vh] lg:h-full lg:flex-1') : 'h-full flex-1'
-        )}>
+      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0">
+
+        {/* Video: aspect-video (16:9) sticky top on mobile, flex-1 on desktop */}
+        <div className="w-full aspect-video flex-shrink-0 bg-black lg:aspect-auto lg:flex-1">
           <VideoPlayer
             mediaId={room?.mediaId}
             poster={media?.backdrop || media?.poster}
@@ -215,6 +212,26 @@ const WatchPage: React.FC = () => {
             showParticipants={showParticipants}
           />
         </div>
+
+        {/* Mobile panel: fills remaining space below video, scrolls internally */}
+        {mobilePanel !== 'none' && (
+          <div className="lg:hidden flex-1 min-h-0 overflow-hidden flex flex-col border-t border-white/10">
+            {/* Close bar */}
+            <div className="flex items-center justify-end px-4 py-1.5 border-b border-white/10 flex-shrink-0">
+              <button
+                onClick={() => setMobilePanel('none')}
+                className="min-h-9 min-w-9 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors touch-manipulation"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {mobilePanel === 'chat' && <ChatPanel isOpen onClose={() => setMobilePanel('none')} />}
+              {mobilePanel === 'participants' && <RoomInfo isOpen onClose={() => setMobilePanel('none')} />}
+              {mobilePanel === 'admin' && isHost && <AdminPanel />}
+            </div>
+          </div>
+        )}
 
         {/* Desktop sidebar */}
         <div className="hidden lg:flex">
@@ -235,48 +252,6 @@ const WatchPage: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Mobile bottom panel - collapsible */}
-      {mobilePanel !== 'none' && (
-        <div className={cn(
-          'lg:hidden fixed left-0 right-0 bg-[#1a1a1a] border-t border-white/10 z-50 transition-all duration-300',
-          isPanelExpanded ? 'bottom-0 h-[80vh]' : 'bottom-0 h-[40vh]'
-        )}>
-          {/* Panel header with drag handle */}
-          <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
-            <button
-              onClick={() => setIsPanelExpanded(!isPanelExpanded)}
-              className="flex items-center gap-2 text-white/50 hover:text-white"
-            >
-              {isPanelExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
-              <span className="text-sm">{isPanelExpanded ? 'Reducir' : 'Expandir'}</span>
-            </button>
-            <button
-              onClick={() => {
-                setMobilePanel('none');
-                setIsPanelExpanded(false);
-              }}
-              className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Panel content */}
-          <div className="h-[calc(100%-44px)]">
-            {mobilePanel === 'chat' && <ChatPanel isOpen onClose={() => setMobilePanel('none')} />}
-            {mobilePanel === 'participants' && <RoomInfo isOpen onClose={() => setMobilePanel('none')} />}
-            {mobilePanel === 'admin' && isHost && <AdminPanel />}
-          </div>
-        </div>
-      )}
-
-      {/* Mobile panel indicator */}
-      {mobilePanel === 'none' && (
-        <div className="lg:hidden absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 bg-black/60 backdrop-blur-sm rounded-full">
-          <span className="text-white/60 text-xs">Usa los botones arriba para abrir chat</span>
-        </div>
-      )}
     </div>
   );
 };

@@ -756,58 +756,54 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
 
         {/* Button row */}
-        <div className="flex items-center justify-between px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pointer-events-auto">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between px-2 sm:px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-auto">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             <button onClick={togglePlay}
-              className="min-w-11 min-h-11 flex items-center justify-center text-white hover:text-[#ff6b35] transition-colors touch-manipulation">
-              {isPlaying ? <Pause className="w-6 h-6 fill-white" /> : <Play className="w-6 h-6 fill-white" />}
+              className="min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center text-white hover:text-[#ff6b35] transition-colors touch-manipulation">
+              {isPlaying ? <Pause className="w-5 h-5 sm:w-6 sm:h-6 fill-white" /> : <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-white" />}
             </button>
             <button onClick={() => skip(-10)}
-              className="min-w-11 min-h-11 flex items-center justify-center text-white/70 hover:text-white transition-colors touch-manipulation">
-              <SkipBack className="w-5 h-5" />
+              className="min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center text-white/70 hover:text-white transition-colors touch-manipulation">
+              <SkipBack className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <button onClick={() => skip(10)}
-              className="min-w-11 min-h-11 flex items-center justify-center text-white/70 hover:text-white transition-colors touch-manipulation">
-              <SkipForward className="w-5 h-5" />
+              className="min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center text-white/70 hover:text-white transition-colors touch-manipulation">
+              <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-            <div className="flex items-center gap-1 group/volume">
-              <button onClick={toggleMute}
-                className="min-w-11 min-h-11 flex items-center justify-center text-white/70 hover:text-white transition-colors touch-manipulation">
-                {volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              </button>
-              <input type="range" min={0} max={1} step={0.05} value={volume} onChange={handleVolumeChange}
-                className="w-16 sm:w-0 sm:group-hover/volume:w-20 h-1 bg-white/30 rounded-full appearance-none cursor-pointer touch-manipulation
-                  transition-all duration-200 overflow-hidden
-                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
-                  [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full" />
-            </div>
+            <button onClick={toggleMute}
+              className="min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center text-white/70 hover:text-white transition-colors touch-manipulation">
+              {volume === 0 ? <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" /> : <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />}
+            </button>
+            <input type="range" min={0} max={1} step={0.05} value={volume} onChange={handleVolumeChange}
+              className="hidden sm:block w-0 sm:group-hover/volume:w-20 h-1 bg-white/30 rounded-full appearance-none cursor-pointer touch-manipulation
+                transition-all duration-200 overflow-hidden
+                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
+                [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full" />
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             {onToggleChat && (
               <button onClick={onToggleChat}
-                className={cn('min-w-11 min-h-11 flex items-center justify-center rounded-lg transition-colors touch-manipulation',
+                className={cn('hidden lg:flex min-w-11 min-h-11 items-center justify-center rounded-lg transition-colors touch-manipulation',
                   showChat ? 'bg-[#ff6b35] text-white' : 'text-white/70 hover:text-white hover:bg-white/10')}>
                 <MessageSquare className="w-5 h-5" />
               </button>
             )}
             {onToggleParticipants && (
               <button onClick={onToggleParticipants}
-                className={cn('min-w-11 min-h-11 flex items-center justify-center rounded-lg transition-colors touch-manipulation',
+                className={cn('hidden lg:flex min-w-11 min-h-11 items-center justify-center rounded-lg transition-colors touch-manipulation',
                   showParticipants ? 'bg-[#ff6b35] text-white' : 'text-white/70 hover:text-white hover:bg-white/10')}>
                 <Users className="w-5 h-5" />
               </button>
             )}
-            {/* Settings gear */}
             <button onClick={() => { setShowSettings(!showSettings); setSettingsMenu('main'); }}
-              className={cn('min-w-11 min-h-11 flex items-center justify-center rounded-lg transition-colors touch-manipulation',
+              className={cn('min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center rounded-lg transition-colors touch-manipulation',
                 showSettings ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10')}>
-              <Settings className="w-5 h-5" />
+              <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-            {/* Fullscreen */}
             <button onClick={toggleFullscreen}
-              className="min-w-11 min-h-11 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors touch-manipulation">
-              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+              className="min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors touch-manipulation">
+              {isFullscreen ? <Minimize className="w-4 h-4 sm:w-5 sm:h-5" /> : <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
           </div>
         </div>

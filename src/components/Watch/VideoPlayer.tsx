@@ -5,6 +5,8 @@ import { useRooms } from '@/hooks/useRooms';
 import { useAuth } from '@/hooks/useAuth';
 import { realtimeRoomService } from '@/lib/realtime-service';
 import { API_BASE_URL } from '@/lib/constants';
+import { FloatingReactions } from './FloatingReactions';
+import { SubtitleSearchModal } from './SubtitleSearchModal';
 import {
   Play,
   Pause,
@@ -18,6 +20,7 @@ import {
   MessageSquare,
   Users,
   ChevronLeft,
+  Search,
 } from 'lucide-react';
 
 // ─── Proxy Config ────────────────────────────────────────────────────────────
@@ -192,6 +195,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [settingsMenu, setSettingsMenu] = useState<SettingsMenu>('main');
   const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSubtitleSearch, setShowSubtitleSearch] = useState(false);
 
   // ── Stream selection state ───────────────────────────────────────────────────
   const [audioStreams, setAudioStreams] = useState<JellyfinStream[]>([]);
@@ -206,25 +210,40 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
 
-  // ── Fetch stream metadata when mediaId changes ────────────────────────────────
-  useEffect(() => {
+  const fetchAndSetStreams = useCallback(async () => {
     if (!mediaId || !token) return;
+    const streams = await fetchJellyfinStreams(mediaId, token);
+    const audio = streams.filter(s => s.Type === 'Audio');
+    const subtitle = streams.filter(s => s.Type === 'Subtitle');
+    setAudioStreams(audio);
+    setSubtitleStreams(subtitle);
+    return { audio, subtitle };
+  }, [mediaId, token]);
+
+  useEffect(() => {
     setAudioStreams([]);
     setSubtitleStreams([]);
     setSelectedAudio(undefined);
     setSelectedSubtitle(-1);
     setSelectedQuality(QUALITY_LEVELS[0]);
 
-    fetchJellyfinStreams(mediaId, token).then((streams) => {
-      const audio = streams.filter(s => s.Type === 'Audio');
-      const subtitle = streams.filter(s => s.Type === 'Subtitle');
-      setAudioStreams(audio);
-      setSubtitleStreams(subtitle);
-      // Auto-select first default audio
-      const defAudio = audio.find(a => a.IsDefault) ?? audio[0];
+    fetchAndSetStreams().then(res => {
+      if (!res) return;
+      const defAudio = res.audio.find(a => a.IsDefault) ?? res.audio[0];
       if (defAudio) setSelectedAudio(defAudio.Index);
     });
-  }, [mediaId, token]);
+  }, [fetchAndSetStreams]);
+
+  const handleSubtitleDownloaded = useCallback(async () => {
+    setShowSubtitleSearch(false);
+    // Refetch streams to get the newly downloaded subtitle
+    const res = await fetchAndSetStreams();
+    if (res && res.subtitle.length > 0) {
+      // Auto-select the last added subtitle which is usually the highest index
+      const maxIndex = Math.max(...res.subtitle.map(s => s.Index));
+      setSelectedSubtitle(maxIndex);
+    }
+  }, [fetchAndSetStreams]);
 
   // ── Subtitle track logic ───────────────────────────────────────────────────
   const [subtitleUrl, setSubtitleUrl] = useState<string | null>(null);
@@ -259,6 +278,27 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       if (subtitleUrl) URL.revokeObjectURL(subtitleUrl);
     };
   }, [subtitleUrl]);
+
+  // Force track mode to 'showing' repeatedly in case HLS.js or browser hides it
+  useEffect(() => {
+    if (!subtitleUrl || selectedSubtitle < 0) return;
+    // We run a small interval to ensure the track stays visible, 
+    // because HLS.js might clear or hide tracks when switching qualities or scrubbing.
+    const interval = setInterval(() => {
+      const video = videoRef.current;
+      if (!video) return;
+      const tracks = video.textTracks;
+      for (let i = 0; i < tracks.length; i++) {
+        // Find our manually injected track or any Spanish track
+        if (tracks[i].label === 'Subtitle' || tracks[i].language === 'es') {
+          if (tracks[i].mode !== 'showing') {
+            tracks[i].mode = 'showing';
+          }
+        }
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [subtitleUrl, selectedSubtitle]);
 
   // ── Load / reload HLS when mediaId or settings change ────────────────────────
   const loadHls = useCallback((mid: string, quality: QualityLevel, audio?: number) => {
@@ -625,6 +665,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               {s.Index === selectedSubtitle && <span className="ml-2 text-xs">✓</span>}
             </button>
           ))}
+          <div className="border-t border-white/10 my-1" />
+          <button onClick={() => { setShowSettings(false); setShowSubtitleSearch(true); }}
+            className="w-full px-4 py-2.5 text-left text-sm text-[#ff6b35] hover:bg-white/10 transition-colors flex items-center gap-2">
+            <Search className="w-4 h-4" /> Buscar Online...
+          </button>
         </div>
       )}
     </div>
@@ -639,6 +684,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onMouseLeave={() => (isPlaying && !showSettings) && setShowControls(false)}
       className={cn('relative bg-black overflow-hidden group', className)}
     >
+      <FloatingReactions />
+      
       {/* ── Video element ── */}
       <video
         ref={videoRef}
@@ -654,11 +701,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       >
         {subtitleUrl && (
           <track
+            key={subtitleUrl}
             src={subtitleUrl}
             kind="subtitles"
             srcLang="es"
             label="Subtitle"
             default
+            onLoad={(e) => {
+              const trackEl = e.target as HTMLTrackElement;
+              const videoEl = trackEl.parentElement as HTMLVideoElement;
+              const trackInfo = videoEl.textTracks?.[0];
+              if (trackInfo) trackInfo.mode = 'showing';
+            }}
           />
         )}
       </video>
@@ -759,6 +813,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <div className="pointer-events-auto">
           {settingsPanelContent}
         </div>
+      )}
+
+      {showSubtitleSearch && mediaId && (
+        <SubtitleSearchModal
+          mediaId={mediaId}
+          onClose={() => setShowSubtitleSearch(false)}
+          onDownloadComplete={handleSubtitleDownloaded}
+        />
       )}
     </div>
   );

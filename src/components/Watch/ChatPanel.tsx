@@ -23,8 +23,28 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const handleSend = () => {
     if (!inputText.trim() || !user) return;
-    sendMessage(inputText);
+    
+    const text = inputText.trim();
+    
+    // Auto-trigger floating reaction if message is exactly an emoji or has keywords
+    const isSingleEmoji = /^[\p{Emoji_Presentation}\p{Emoji}\uFE0F]{1,3}$/u.test(text);
+    const hasLaughKeyword = /\b(jaja|haha|lol|lmao|xd)\b/i.test(text);
+    
+    if (isSingleEmoji) {
+      const event = new CustomEvent('local_reaction', { detail: { emoji: text } });
+      window.dispatchEvent(event);
+    } else if (hasLaughKeyword) {
+      const event = new CustomEvent('local_reaction', { detail: { emoji: '😂' } });
+      window.dispatchEvent(event);
+    }
+
+    sendMessage(text);
     setInputText('');
+  };
+
+  const handleQuickReaction = (emoji: string) => {
+    const event = new CustomEvent('local_reaction', { detail: { emoji } });
+    window.dispatchEvent(event);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -146,6 +166,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           ))
         )}
         <div ref={messagesEndRef} />
+      </div>
+
+      {/* Quick Reactions Bar */}
+      <div className="px-4 py-2 border-t border-white/10 flex items-center justify-around bg-black/20">
+        {['😂', '😍', '🔥', '😱', '👏', '🍿'].map((emoji) => (
+          <button
+            key={emoji}
+            onClick={() => handleQuickReaction(emoji)}
+            className="text-xl hover:scale-125 transition-transform p-1 hover:bg-white/10 rounded-full"
+            title={`Enviar reacción ${emoji}`}
+          >
+            {emoji}
+          </button>
+        ))}
       </div>
 
       {/* Input */}

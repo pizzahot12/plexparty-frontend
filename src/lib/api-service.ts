@@ -348,6 +348,26 @@ export class ApiService {
     }>('/media/status');
   }
 
+  // Remote Subtitle Search and Download
+  async searchSubtitles(mediaId: string, language: string = 'spa') {
+    return this.request<Array<{
+      Id: string;
+      Name: string;
+      ProviderName: string;
+      Format: string;
+      ThreeLetterISOLanguageName: string;
+      IsHashMatch: boolean;
+      Comment: string;
+      Language: string;
+    }>>(`/media/${mediaId}/subtitles/search?language=${language}`);
+  }
+
+  async downloadSubtitle(mediaId: string, subtitleId: string) {
+    return this.request<{ success: boolean }>(`/media/${mediaId}/subtitles/download`, {
+      method: 'POST',
+      body: JSON.stringify({ subtitleId }),
+    });
+  }
   // Image proxy (avoids exposing Jellyfin API key)
   getImageUrl(itemId: string, type: 'Primary' | 'Backdrop' = 'Primary', maxWidth?: number): string {
     const params = maxWidth ? `?maxWidth=${maxWidth}` : '';

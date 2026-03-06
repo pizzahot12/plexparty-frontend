@@ -12,7 +12,8 @@ type WebSocketEventType =
   | 'user_kicked'
   | 'room_closed'
   | 'chat_message'
-  | 'quality_changed';
+  | 'quality_changed'
+  | 'reaction';
 
 interface WebSocketEvent {
   type: WebSocketEventType;
@@ -44,6 +45,7 @@ export class WebSocketService {
       'room_closed',
       'chat_message',
       'quality_changed',
+      'reaction',
     ];
     eventTypes.forEach((type) => {
       this.eventHandlers.set(type, []);
@@ -210,6 +212,10 @@ export class WebSocketService {
 
   sendMessage(text: string): void {
     this.send({ type: 'chat_message', text });
+  }
+
+  sendReaction(emoji: string): void {
+    this.send({ type: 'reaction', emoji });
   }
 
   isConnected(): boolean {

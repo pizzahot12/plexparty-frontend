@@ -70,8 +70,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = React.memo(({
       'flex flex-col bg-[#1a1a1a] border-l border-white/10 h-full',
       className
     )}>
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-white/10">
+      {/* Header - only on desktop (on mobile the tab already indicates context) */}
+      <div className="hidden lg:flex items-center justify-between p-4 border-b border-white/10">
         <div>
           <h3 className="text-white font-semibold">Chat</h3>
           <p className="text-white/50 text-sm">{messages.length} mensajes</p>
@@ -80,7 +80,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = React.memo(({
           <button
             onClick={onClose}
             aria-label="Cerrar chat"
-            className="lg:hidden p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
           >
             <MoreVertical className="w-5 h-5" />
           </button>

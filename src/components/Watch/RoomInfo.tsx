@@ -49,8 +49,8 @@ export const RoomInfo: React.FC<RoomInfoProps> = ({
       'flex flex-col bg-[#1a1a1a] border-l border-white/10 h-full',
       className
     )}>
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-white/10">
+      {/* Header - only on desktop (on mobile the tab already indicates context) */}
+      <div className="hidden lg:flex items-center justify-between p-4 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[#ff6b35]/20 rounded-xl flex items-center justify-center">
             <Users className="w-5 h-5 text-[#ff6b35]" />
@@ -63,7 +63,7 @@ export const RoomInfo: React.FC<RoomInfoProps> = ({
         {onClose && (
           <button
             onClick={onClose}
-            className="lg:hidden p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
           >
             <MoreVertical className="w-5 h-5" />
           </button>
@@ -71,31 +71,31 @@ export const RoomInfo: React.FC<RoomInfoProps> = ({
       </div>
 
       {/* Room code */}
-      <div className="p-4 border-b border-white/10">
-        <p className="text-white/50 text-sm mb-2">Código de la sala</p>
+      <div className="px-3 py-2 lg:p-4 border-b border-white/10">
+        <p className="text-white/50 text-xs mb-1.5">Código de la sala</p>
         <div className="flex items-center gap-2">
-          <div className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
-            <span className="text-2xl font-mono font-bold text-white tracking-wider">
+          <div className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 lg:px-4 lg:py-3">
+            <span className="text-lg lg:text-2xl font-mono font-bold text-white tracking-wider">
               {room.code}
             </span>
           </div>
           <button
             onClick={handleCopyCode}
             className={cn(
-              'p-3 rounded-xl transition-colors',
+              'p-2.5 lg:p-3 rounded-xl transition-colors',
               copied
                 ? 'bg-green-500/20 text-green-400'
                 : 'bg-white/10 text-white hover:bg-white/20'
             )}
           >
-            {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+            {copied ? <Check className="w-4 h-4 lg:w-5 lg:h-5" /> : <Copy className="w-4 h-4 lg:w-5 lg:h-5" />}
           </button>
           <div className="relative">
             <button
               onClick={() => setShowShareMenu(!showShareMenu)}
-              className="p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"
+              className="p-2.5 lg:p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"
             >
-              <Share2 className="w-5 h-5" />
+              <Share2 className="w-4 h-4 lg:w-5 lg:h-5" />
             </button>
             {showShareMenu && (
               <div className="absolute right-0 top-full mt-2 w-48 bg-[#242424] border border-white/10 rounded-xl overflow-hidden shadow-xl z-10">
@@ -126,13 +126,13 @@ export const RoomInfo: React.FC<RoomInfoProps> = ({
       </div>
 
       {/* Participants list */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-3">
+      <div className="flex-1 overflow-y-auto p-2 lg:p-4">
+        <div className="space-y-2 lg:space-y-3">
           {room?.participants.map((participant: { id: string; name: string; avatar?: string; isHost: boolean; isOnline: boolean; isWatching: boolean }) => (
             <div
               key={participant.id}
               className={cn(
-                'flex items-center gap-3 p-3 rounded-xl transition-colors',
+                'flex items-center gap-3 p-2.5 lg:p-3 rounded-xl transition-colors',
                 participant.isOnline
                   ? 'bg-white/5'
                   : 'bg-white/[0.02] opacity-60'
@@ -194,18 +194,18 @@ export const RoomInfo: React.FC<RoomInfoProps> = ({
       </div>
 
       {/* Stats */}
-      <div className="p-4 border-t border-white/10">
+      <div className="px-3 py-2 lg:p-4 border-t border-white/10">
         <div className="grid grid-cols-3 gap-2">
-          <div className="text-center p-2 bg-white/5 rounded-lg">
-            <p className="text-lg font-bold text-white">{room?.participants.length || 0}</p>
+          <div className="text-center p-1.5 lg:p-2 bg-white/5 rounded-lg">
+            <p className="text-base lg:text-lg font-bold text-white">{room?.participants.length || 0}</p>
             <p className="text-xs text-white/50">Total</p>
           </div>
-          <div className="text-center p-2 bg-white/5 rounded-lg">
-            <p className="text-lg font-bold text-green-400">{onlineParticipants.length}</p>
+          <div className="text-center p-1.5 lg:p-2 bg-white/5 rounded-lg">
+            <p className="text-base lg:text-lg font-bold text-green-400">{onlineParticipants.length}</p>
             <p className="text-xs text-white/50">En línea</p>
           </div>
-          <div className="text-center p-2 bg-white/5 rounded-lg">
-            <p className="text-lg font-bold text-[#ff6b35]">{watchingParticipants.length}</p>
+          <div className="text-center p-1.5 lg:p-2 bg-white/5 rounded-lg">
+            <p className="text-base lg:text-lg font-bold text-[#ff6b35]">{watchingParticipants.length}</p>
             <p className="text-xs text-white/50">Viendo</p>
           </div>
         </div>

@@ -185,8 +185,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     room,
   } = useRooms();
 
-  // Single static session id to prevent leaking transcode sessions on Jellyfin
+  // Session id for Jellyfin transcoding — rotated on quality/audio change so Jellyfin
+  // creates a fresh transcode session with the new parameters instead of reusing the old one
   const playSessionId = useRef(`pp_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`);
+  const rotateSessionId = () => {
+    playSessionId.current = `pp_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`;
+  };
 
   // Track isPlaying in a ref so loadHls() callback doesn't capture stale state
   const isPlayingRef = useRef(false);
@@ -383,6 +387,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     savedTimeRef.current = videoRef.current?.currentTime ?? 0;
     setSelectedQuality(q);
     setShowSettings(false);
+    rotateSessionId(); // new session so Jellyfin transcodes at the new bitrate
     loadHls(mediaId, q, selectedAudio);
   };
 
@@ -392,6 +397,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     savedTimeRef.current = videoRef.current?.currentTime ?? 0;
     setSelectedAudio(index);
     setShowSettings(false);
+    rotateSessionId(); // new session so Jellyfin picks the correct audio track
     loadHls(mediaId, selectedQuality, index);
   };
 

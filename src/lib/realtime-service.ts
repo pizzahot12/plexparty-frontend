@@ -125,6 +125,10 @@ class RealtimeRoomService {
             })
             .on('broadcast', { event: 'room_closed' }, () => {
                 this.onRoomClosed?.({});
+            })
+            .on('broadcast', { event: 'reaction' }, ({ payload }) => {
+                // Dispatch a global CustomEvent so FloatingReactions can pick it up
+                window.dispatchEvent(new CustomEvent('remote_reaction', { detail: { emoji: payload.emoji } }));
             });
 
         // ── Presence listener ───────────────────────────────────────────────
@@ -258,6 +262,15 @@ class RealtimeRoomService {
     }
 
     // ── Public: admin commands ──────────────────────────────────────────────
+
+    sendReaction(emoji: string): void {
+        if (!this.channel) return;
+        this.channel.send({
+            type: 'broadcast',
+            event: 'reaction',
+            payload: { emoji },
+        });
+    }
 
     sendKickUser(userId: string): void {
         if (!this.channel) return;

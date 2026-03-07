@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import webSocketService from '@/lib/websocket-service';
+import { realtimeRoomService } from '@/lib/realtime-service';
 
 export interface ReactionParticle {
   id: string;
@@ -44,19 +44,13 @@ export const FloatingReactions: React.FC<FloatingReactionsProps> = ({ className 
   }, []);
 
   useEffect(() => {
-    // Escuchar eventos de reacción del WS
-    const unsubscribe = webSocketService.on('reaction', (event: any) => {
-      if (event.emoji) {
-        // En este simple componente, asumimos que si llega por WS, alguien más lo envió.
-        // Podríamos filtrar por userId si quisiéramos distinguirlos perfectamente,
-        // pero por ahora el efecto visual principal de "aparecer" es lo importante.
-        addReaction(event.emoji, false);
-      }
-    });
-
-    return () => {
-      unsubscribe();
+    // Escuchar reacciones de otros usuarios via Supabase Realtime
+    const handleRemote = (e: Event) => {
+      const emoji = (e as CustomEvent<{ emoji: string }>).detail?.emoji;
+      if (emoji) addReaction(emoji, false);
     };
+    window.addEventListener('remote_reaction', handleRemote);
+    return () => window.removeEventListener('remote_reaction', handleRemote);
   }, [addReaction]);
 
   // Permitir exponer addReaction via Ref o manejador global si es necesario,
@@ -66,7 +60,7 @@ export const FloatingReactions: React.FC<FloatingReactionsProps> = ({ className 
       const emoji = e.detail?.emoji;
       if (emoji) {
         addReaction(emoji, true);
-        webSocketService.sendReaction(emoji);
+        realtimeRoomService.sendReaction(emoji);
       }
     };
 

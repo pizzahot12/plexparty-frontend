@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { useChat } from '@/hooks/useChat';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,7 +11,7 @@ interface ChatPanelProps {
   onClose?: () => void;
 }
 
-export const ChatPanel: React.FC<ChatPanelProps> = ({
+export const ChatPanel: React.FC<ChatPanelProps> = React.memo(({
   className,
   isOpen = true,
   onClose,
@@ -21,7 +21,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [inputText, setInputText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     if (!inputText.trim() || !user) return;
     
     const text = inputText.trim();
@@ -40,19 +40,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
     sendMessage(text);
     setInputText('');
-  };
+  }, [inputText, user, sendMessage]);
 
-  const handleQuickReaction = (emoji: string) => {
+  const handleQuickReaction = useCallback((emoji: string) => {
     const event = new CustomEvent('local_reaction', { detail: { emoji } });
     window.dispatchEvent(event);
-  };
+  }, []);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
-  };
+  }, [handleSend]);
 
   // Auto-focus input when panel opens (desktop only — on mobile would trigger keyboard)
   useEffect(() => {
@@ -79,6 +79,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         {onClose && (
           <button
             onClick={onClose}
+            aria-label="Cerrar chat"
             className="lg:hidden p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
           >
             <MoreVertical className="w-5 h-5" />
@@ -127,6 +128,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                           <img
                             src={message.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${message.userId}`}
                             alt={message.userName}
+                            loading="lazy"
+                            decoding="async"
                             className="w-8 h-8 rounded-full bg-white/10"
                           />
                         ) : (
@@ -187,6 +190,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => {}}
+            aria-label="Insertar emoji o GIF"
             className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
           >
             <Smile className="w-5 h-5" />
@@ -197,12 +201,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
+            aria-label="Escribir mensaje de chat"
             placeholder="Escribe un mensaje..."
             className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]/50 focus:border-[#ff6b35]/50"
           />
           <button
             onClick={handleSend}
             disabled={!inputText.trim()}
+            aria-label="Enviar mensaje"
             className={cn(
               'p-2.5 rounded-xl transition-colors',
               inputText.trim()
@@ -216,4 +222,4 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
     </div>
   );
-};
+});

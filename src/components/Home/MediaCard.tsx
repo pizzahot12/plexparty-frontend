@@ -53,6 +53,8 @@ export const MediaCard: React.FC<MediaCardProps> = ({
           <img
             src={media.poster}
             alt={media.title}
+            loading="lazy"
+            decoding="async"
             className={cn(
               'w-full h-full object-cover transition-all duration-300',
               imageLoaded ? 'opacity-100' : 'opacity-0',
@@ -96,6 +98,8 @@ export const MediaCard: React.FC<MediaCardProps> = ({
           <img
             src={media.backdrop || media.poster}
             alt={media.title}
+            loading="lazy"
+            decoding="async"
             className={cn(
               'w-full h-full object-cover transition-transform duration-500',
               imageLoaded ? 'opacity-100' : 'opacity-0',
@@ -171,6 +175,8 @@ export const MediaCard: React.FC<MediaCardProps> = ({
         <img
           src={media.poster}
           alt={media.title}
+          loading="lazy"
+          decoding="async"
           className={cn(
             'w-full h-full object-cover transition-all duration-300',
             imageLoaded ? 'opacity-100' : 'opacity-0',

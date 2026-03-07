@@ -5,6 +5,7 @@ import type { Media } from '@/types';
 import { useMedia } from '@/hooks/useMedia';
 import { useRooms } from '@/hooks/useRooms';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Button } from '@/components/Common/Button';
 import { 
   Play, 
@@ -27,6 +28,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ media, className }) 
   const { isFavorite, toggleFavorite } = useMedia();
   const { createRoom } = useRooms();
   const { showSuccess, showError } = useNotifications();
+
+  useDocumentTitle(media.title);
 
   const favorite = isFavorite(media.id);
 

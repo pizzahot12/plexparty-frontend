@@ -5,6 +5,7 @@ import type { Media, Season, Episode } from '@/types';
 import { useMedia } from '@/hooks/useMedia';
 import { useRooms } from '@/hooks/useRooms';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { apiService } from '@/lib/api-service';
 import { Button } from '@/components/Common/Button';
 import { EpisodeSelector } from './EpisodeSelector';
@@ -30,6 +31,8 @@ export const SeriesDetails: React.FC<SeriesDetailsProps> = ({ media, className }
   const { isFavorite, toggleFavorite } = useMedia();
   const { createRoom } = useRooms();
   const { showSuccess, showError } = useNotifications();
+
+  useDocumentTitle(media.title);
 
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [episodes, setEpisodes] = useState<Episode[]>([]);

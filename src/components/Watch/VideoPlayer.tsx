@@ -744,7 +744,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
         {/* Progress bar */}
         <div className="px-4 pb-2 pointer-events-auto">
-          <input type="range" min={0} max={duration || 100} value={currentTime} onChange={handleSeek}
+          <input type="range" min={0} max={duration || 100} value={currentTime} onChange={handleSeek} aria-label="Progreso de reproducción"
             className="w-full h-1.5 bg-white/30 rounded-full appearance-none cursor-pointer touch-manipulation
               [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
               [&::-webkit-slider-thumb]:bg-[#ff6b35] [&::-webkit-slider-thumb]:rounded-full
@@ -758,23 +758,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         {/* Button row */}
         <div className="flex items-center justify-between px-2 sm:px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-auto">
           <div className="flex items-center gap-0.5 sm:gap-1">
-            <button onClick={togglePlay}
+            <button onClick={togglePlay} aria-label={isPlaying ? "Pausar" : "Reproducir"}
               className="min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center text-white hover:text-[#ff6b35] transition-colors touch-manipulation">
               {isPlaying ? <Pause className="w-5 h-5 sm:w-6 sm:h-6 fill-white" /> : <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-white" />}
             </button>
-            <button onClick={() => skip(-10)}
+            <button onClick={() => skip(-10)} aria-label="Retroceder 10 segundos"
               className="min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center text-white/70 hover:text-white transition-colors touch-manipulation">
               <SkipBack className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-            <button onClick={() => skip(10)}
+            <button onClick={() => skip(10)} aria-label="Adelantar 10 segundos"
               className="min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center text-white/70 hover:text-white transition-colors touch-manipulation">
               <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-            <button onClick={toggleMute}
+            <button onClick={toggleMute} aria-label={volume === 0 ? "Activar sonido" : "Silenciar"}
               className="min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center text-white/70 hover:text-white transition-colors touch-manipulation">
               {volume === 0 ? <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" /> : <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
-            <input type="range" min={0} max={1} step={0.05} value={volume} onChange={handleVolumeChange}
+            <input type="range" min={0} max={1} step={0.05} value={volume} onChange={handleVolumeChange} aria-label="Volumen"
               className="hidden sm:block w-0 sm:group-hover/volume:w-20 h-1 bg-white/30 rounded-full appearance-none cursor-pointer touch-manipulation
                 transition-all duration-200 overflow-hidden
                 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
@@ -783,25 +783,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
           <div className="flex items-center gap-0.5 sm:gap-1">
             {onToggleChat && (
-              <button onClick={onToggleChat}
+              <button onClick={onToggleChat} aria-label={showChat ? "Ocultar chat" : "Mostrar chat"}
                 className={cn('hidden lg:flex min-w-11 min-h-11 items-center justify-center rounded-lg transition-colors touch-manipulation',
                   showChat ? 'bg-[#ff6b35] text-white' : 'text-white/70 hover:text-white hover:bg-white/10')}>
                 <MessageSquare className="w-5 h-5" />
               </button>
             )}
             {onToggleParticipants && (
-              <button onClick={onToggleParticipants}
+              <button onClick={onToggleParticipants} aria-label={showParticipants ? "Ocultar participantes" : "Mostrar participantes"}
                 className={cn('hidden lg:flex min-w-11 min-h-11 items-center justify-center rounded-lg transition-colors touch-manipulation',
                   showParticipants ? 'bg-[#ff6b35] text-white' : 'text-white/70 hover:text-white hover:bg-white/10')}>
                 <Users className="w-5 h-5" />
               </button>
             )}
-            <button onClick={() => { setShowSettings(!showSettings); setSettingsMenu('main'); }}
+            <button onClick={() => { setShowSettings(!showSettings); setSettingsMenu('main'); }} aria-label="Ajustes de reproducción"
               className={cn('min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center rounded-lg transition-colors touch-manipulation',
                 showSettings ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10')}>
               <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-            <button onClick={toggleFullscreen}
+            <button onClick={toggleFullscreen} aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               className="min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors touch-manipulation">
               {isFullscreen ? <Minimize className="w-4 h-4 sm:w-5 sm:h-5" /> : <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>

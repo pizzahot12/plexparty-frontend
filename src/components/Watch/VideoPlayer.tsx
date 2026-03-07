@@ -93,8 +93,7 @@ function buildHlsUrl(
     TranscodingMaxAudioChannels: '2',
     SegmentContainer: 'ts',
     MinSegments: '1',
-    ManifestTranscriptionEnabled: 'true',
-    TranscodeReasons: 'ContainerNotSupported,VideoCodecNotSupported',
+    BreakOnNonKeyFrames: 'true',
   };
 
   // Quality cap (0 = Auto, let Jellyfin handle it)

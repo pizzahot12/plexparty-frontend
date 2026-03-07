@@ -185,25 +185,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     room,
   } = useRooms();
 
-  // Session id for Jellyfin transcoding — rotated on quality/audio change so Jellyfin
-  // creates a fresh transcode session with the new parameters instead of reusing the old one
+  // Single stable session id — Jellyfin uses this to track the transcoding session.
+  // We do NOT rotate it on quality change; instead we force the HLS.js level after
+  // MANIFEST_PARSED so Jellyfin's ABR doesn't override the user's selection.
   const playSessionId = useRef(`pp_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`);
-
-  // Stop the current Jellyfin transcoding job then generate a new session ID.
-  // Without explicitly deleting the active encoding, Jellyfin keeps the old
-  // hls1/main path occupied and returns 500 on segments for the new session.
-  const rotateSessionId = useCallback((mid: string) => {
-    const oldId = playSessionId.current;
-    // Fire-and-forget: tell Jellyfin to stop the old transcoding job
-    fetch(
-      `${PROXY_URL}/Videos/${mid}/ActiveEncodings?DeviceId=${DEVICE_ID}&PlaySessionId=${oldId}`,
-      {
-        method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      }
-    ).catch(() => { /* best-effort */ });
-    playSessionId.current = `pp_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`;
-  }, [token]);
+  // Track the quality the user last selected so MANIFEST_PARSED can enforce it
+  const selectedQualityRef = useRef<QualityLevel | null>(null);
 
   // Track isPlaying in a ref so loadHls() callback doesn't capture stale state
   const isPlayingRef = useRef(false);
@@ -354,8 +341,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       hls.loadSource(hlsUrl);
       hls.attachMedia(video);
 
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      hls.on(Hls.Events.MANIFEST_PARSED, (_e, data) => {
         setBuffering(false);
+        // Force the HLS.js level to match the selected quality so Jellyfin's
+        // ABR doesn't override the user's selection.
+        const q = selectedQualityRef.current;
+        if (q && q.bitrate > 0 && data.levels && data.levels.length > 1) {
+          // Find the level whose bitrate is closest to the target
+          let bestIdx = 0;
+          let bestDiff = Infinity;
+          data.levels.forEach((lvl: { bitrate: number }, i: number) => {
+            const diff = Math.abs(lvl.bitrate - q.bitrate);
+            if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+          });
+          hls.currentLevel = bestIdx;
+        } else if (q && q.bitrate === 0) {
+          hls.currentLevel = -1; // Auto
+        }
         // Restore position after quality/audio/subtitle switch
         if (savedTimeRef.current > 2) video.currentTime = savedTimeRef.current;
         // Use ref (not stale closure) to auto-resume playback after quality change
@@ -399,8 +401,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (!mediaId) return;
     savedTimeRef.current = videoRef.current?.currentTime ?? 0;
     setSelectedQuality(q);
+    selectedQualityRef.current = q;
     setShowSettings(false);
-    rotateSessionId(mediaId); // stop old job + new session so Jellyfin transcodes at the new bitrate
     loadHls(mediaId, q, selectedAudio);
   };
 
@@ -410,7 +412,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     savedTimeRef.current = videoRef.current?.currentTime ?? 0;
     setSelectedAudio(index);
     setShowSettings(false);
-    rotateSessionId(mediaId); // stop old job + new session so Jellyfin picks the correct audio track
     loadHls(mediaId, selectedQuality, index);
   };
 

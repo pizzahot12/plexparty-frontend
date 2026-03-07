@@ -26,7 +26,7 @@ const WatchPage: React.FC = () => {
   const [showChat, setShowChat] = useState(true);
   const [showParticipants, setShowParticipants] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
-  const [showMobileAdmin, setShowMobileAdmin] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'chat' | 'participants'>('chat');
 
   // Sync progress every 10 seconds
   useEffect(() => {
@@ -157,22 +157,20 @@ const WatchPage: React.FC = () => {
           )}
         </div>
 
-        {/* Mobile: only show admin crown for host */}
-        {isHost && (
-          <div className="lg:hidden">
+        {/* Mobile: admin crown for host only */}
+        <div className="lg:hidden flex items-center gap-1">
+          {isHost && (
             <button
-              onClick={() => setShowMobileAdmin(!showMobileAdmin)}
+              onClick={() => setShowAdmin(!showAdmin)}
               className={cn(
                 'min-h-11 min-w-11 flex items-center justify-center rounded-lg transition-colors touch-manipulation',
-                showMobileAdmin
-                  ? 'bg-yellow-500 text-white'
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
+                showAdmin ? 'bg-yellow-500 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
               )}
             >
               <Crown className="w-5 h-5" />
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       {/* Main content */}
@@ -191,12 +189,49 @@ const WatchPage: React.FC = () => {
           />
         </div>
 
-        {/* Mobile: chat always visible below video */}
+        {/* Mobile: tabs Chat / Participantes always visible below video */}
         <div className="lg:hidden flex-1 min-h-0 overflow-hidden flex flex-col border-t border-white/10">
-          {showMobileAdmin && isHost
-            ? <AdminPanel />
-            : <ChatPanel isOpen />
-          }
+          {/* Admin panel overlay */}
+          {showAdmin && isHost ? (
+            <AdminPanel />
+          ) : (
+            <>
+              {/* Tab bar */}
+              <div className="flex flex-shrink-0 border-b border-white/10">
+                <button
+                  onClick={() => setMobileTab('chat')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors touch-manipulation',
+                    mobileTab === 'chat'
+                      ? 'text-[#ff6b35] border-b-2 border-[#ff6b35]'
+                      : 'text-white/50 hover:text-white'
+                  )}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Chat
+                </button>
+                <button
+                  onClick={() => setMobileTab('participants')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors touch-manipulation',
+                    mobileTab === 'participants'
+                      ? 'text-[#ff6b35] border-b-2 border-[#ff6b35]'
+                      : 'text-white/50 hover:text-white'
+                  )}
+                >
+                  <Users className="w-4 h-4" />
+                  Participantes
+                </button>
+              </div>
+              {/* Panel content */}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {mobileTab === 'chat'
+                  ? <ChatPanel isOpen />
+                  : <RoomInfo isOpen onClose={() => setMobileTab('chat')} />
+                }
+              </div>
+            </>
+          )}
         </div>
 
         {/* Desktop sidebar */}

@@ -214,17 +214,24 @@ const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       if (event === 'SIGNED_IN' && session) {
-        setReady(false);
-        const result = await googleLogin(session.access_token);
-        if (result && !result.success && result.isPending) {
-          setWaitlistError(true);
-          await supabase.auth.signOut();
-        } else if (result && !result.success) {
-          await logout();
-          await supabase.auth.signOut();
+        // Only run the initialization flow if we are not already authenticated.
+        // Supabase sometimes fires SIGNED_IN again when the tab regains focus.
+        const isAuth = useAuthStore.getState().isAuthenticated;
+        
+        if (!isAuth) {
+          setReady(false);
+          const result = await googleLogin(session.access_token);
+          if (result && !result.success && result.isPending) {
+            setWaitlistError(true);
+            await supabase.auth.signOut();
+          } else if (result && !result.success) {
+            await logout();
+            await supabase.auth.signOut();
+          }
+          if (mounted) setReady(true);
         }
-        if (mounted) setReady(true);
       } else if (event === 'SIGNED_OUT') {
+        // If the user actively signs out (or token gets fully revoked)
         await logout();
       }
     });

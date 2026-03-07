@@ -125,8 +125,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className }) => {
           </div>
         </button>
 
-        {/* Invite friends */}
-        <div className="relative">
+        {/* Invite friends - desktop only */}
+        <div className="relative hidden lg:block">
           <button
             onClick={() => setShowInviteMenu(!showInviteMenu)}
             className="w-full flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
@@ -175,10 +175,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className }) => {
           )}
         </div>
 
-        {/* Room settings */}
+        {/* Room settings - desktop only */}
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className="w-full flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+          className="hidden lg:flex w-full items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
         >
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
@@ -196,9 +196,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className }) => {
         </button>
       </div>
 
-      {/* Settings panel */}
+      {/* Settings panel - desktop only */}
       {showSettings && (
-        <div className="px-4 pb-4">
+        <div className="hidden lg:block px-4 pb-4">
           <div className="p-4 bg-white/5 rounded-xl space-y-4">
             <div>
               <label className="text-white/70 text-sm">Sincronización</label>

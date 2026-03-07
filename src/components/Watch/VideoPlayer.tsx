@@ -21,6 +21,7 @@ import {
   Users,
   ChevronLeft,
   Search,
+  PictureInPicture2,
 } from 'lucide-react';
 
 // ─── Proxy Config ────────────────────────────────────────────────────────────
@@ -197,6 +198,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // ── UI state ─────────────────────────────────────────────────────────────────
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPip, setIsPip] = useState(false);
+  const [pipSupported, setPipSupported] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsMenu, setSettingsMenu] = useState<SettingsMenu>('main');
   const [buffering, setBuffering] = useState(false);
@@ -534,6 +537,85 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [videoRef.current]);
 
+  // ── Picture-in-Picture ────────────────────────────────────────────────────────
+  const togglePip = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video) return;
+    try {
+      if ((document as any).pictureInPictureElement) {
+        await (document as any).exitPictureInPicture();
+      } else if ((document as any).pictureInPictureEnabled) {
+        await (video as any).requestPictureInPicture();
+      } else if (typeof (video as any).webkitSetPresentationMode === 'function') {
+        // Safari / iOS
+        const mode = (video as any).webkitPresentationMode === 'picture-in-picture'
+          ? 'inline'
+          : 'picture-in-picture';
+        (video as any).webkitSetPresentationMode(mode);
+      }
+    } catch (e) {
+      console.error('[PiP] toggle error:', e);
+    }
+  }, []);
+
+  // Detect PiP support + listen for PiP state changes
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const supported =
+      !!(document as any).pictureInPictureEnabled ||
+      typeof (video as any).webkitSetPresentationMode === 'function';
+    setPipSupported(supported);
+
+    // Enable Chrome's automatic PiP when user switches tabs
+    if ((document as any).pictureInPictureEnabled) {
+      (video as any).autoPictureInPicture = true;
+    }
+
+    const onEnter = () => setIsPip(true);
+    const onLeave = () => setIsPip(false);
+    const onWebkitChange = () => {
+      setIsPip((video as any).webkitPresentationMode === 'picture-in-picture');
+    };
+
+    video.addEventListener('enterpictureinpicture', onEnter);
+    video.addEventListener('leavepictureinpicture', onLeave);
+    video.addEventListener('webkitpresentationmodechanged', onWebkitChange);
+
+    return () => {
+      video.removeEventListener('enterpictureinpicture', onEnter);
+      video.removeEventListener('leavepictureinpicture', onLeave);
+      video.removeEventListener('webkitpresentationmodechanged', onWebkitChange);
+    };
+  }, []);
+
+  // Auto-PiP on mobile via IntersectionObserver (when video leaves viewport)
+  useEffect(() => {
+    const isMobile = window.innerWidth < 1024;
+    if (!isMobile || !pipSupported) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const video = videoRef.current;
+        if (!video) return;
+        if (!entry.isIntersecting && isPlayingRef.current) {
+          if ((document as any).pictureInPictureEnabled && !(document as any).pictureInPictureElement) {
+            (video as any).requestPictureInPicture().catch(() => {});
+          } else if (typeof (video as any).webkitSetPresentationMode === 'function') {
+            (video as any).webkitSetPresentationMode('picture-in-picture');
+          }
+        } else if (entry.isIntersecting && (document as any).pictureInPictureElement) {
+          (document as any).exitPictureInPicture().catch(() => {});
+        }
+      },
+      { threshold: 0.2 }
+    );
+
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [pipSupported]);
+
   // Auto-hide controls
   const handleMouseMove = useCallback(() => {
     setShowControls(true);
@@ -823,6 +905,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 showSettings ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10')}>
               <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
+            {pipSupported && (
+              <button onClick={togglePip} aria-label={isPip ? "Salir de PiP" : "Picture in Picture"}
+                className={cn('min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center rounded-lg transition-colors touch-manipulation',
+                  isPip ? 'bg-[#ff6b35] text-white' : 'text-white/70 hover:text-white hover:bg-white/10')}>
+                <PictureInPicture2 className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            )}
             <button onClick={toggleFullscreen} aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               className="min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors touch-manipulation">
               {isFullscreen ? <Minimize className="w-4 h-4 sm:w-5 sm:h-5" /> : <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />}

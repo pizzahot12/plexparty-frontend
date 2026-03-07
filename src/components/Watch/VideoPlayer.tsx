@@ -331,10 +331,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         levelLoadingTimeOut: 120_000,
         fragLoadingTimeOut: 120_000,
         fragLoadingMaxRetry: 6,
-        maxBufferLength: 60,
-        maxMaxBufferLength: 120,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
         startPosition: -1,
         autoStartLoad: true,
+        enableWorker: true,
         xhrSetup: (xhr: XMLHttpRequest) => {
           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         }
@@ -367,11 +368,28 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (isPlayingRef.current) video.play().catch(() => { });
       });
 
+      // Track whether we already attempted media error recovery
+      let mediaErrorRecovered = false;
+
       hls.on(Hls.Events.ERROR, (_evt: unknown, data: { fatal: boolean; type: string; details: string }) => {
         if (!data.fatal) return;
         console.error('[HLS] fatal error', data.type, data.details);
+
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          // Retry network errors after a short delay
           setTimeout(() => hls.startLoad(), 3_000);
+        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          if (!mediaErrorRecovered) {
+            // First media error: attempt automatic recovery
+            mediaErrorRecovered = true;
+            console.warn('[HLS] attempting media error recovery...');
+            hls.recoverMediaError();
+          } else {
+            // Recovery also failed — destroy and show error
+            hls.destroy();
+            setError('Error cargando el vídeo. Inténtalo de nuevo.');
+            setBuffering(false);
+          }
         } else {
           setError('Error cargando el vídeo. Inténtalo de nuevo.');
           setBuffering(false);

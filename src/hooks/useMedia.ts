@@ -144,9 +144,9 @@ export const useMedia = () => {
     if (globalHasFetched) return;
     globalHasFetched = true;
 
-    // Initial data load when authenticated
-    loadMovies(0, 50); // Just fetch 50 initially, infinite scroll will load the rest
-    loadSeries(0, 50);
+    // Load all available content upfront — backend supports up to 5000
+    loadMovies(0, 500);
+    loadSeries(0, 500);
     loadTrending();
     loadContinueWatching();
   }, [isAuthenticated, loadMovies, loadSeries, loadTrending, loadContinueWatching]);

@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMedia } from '@/hooks/useMedia';
 import { Loading } from '@/components/Common/Loading';
 import { Button } from '@/components/Common/Button';
-import { ArrowLeft, MessageSquare, Users, Crown, X } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Users, Crown } from 'lucide-react';
 
 import { apiService } from '@/lib/api-service';
 
@@ -26,7 +26,7 @@ const WatchPage: React.FC = () => {
   const [showChat, setShowChat] = useState(true);
   const [showParticipants, setShowParticipants] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
-  const [mobilePanel, setMobilePanel] = useState<'none' | 'chat' | 'participants' | 'admin'>('none');
+  const [showMobileAdmin, setShowMobileAdmin] = useState(false);
 
   // Sync progress every 10 seconds
   useEffect(() => {
@@ -157,44 +157,22 @@ const WatchPage: React.FC = () => {
           )}
         </div>
 
-        {/* Mobile panel selector */}
-        <div className="lg:hidden flex items-center gap-2">
-          <button
-            onClick={() => setMobilePanel(mobilePanel === 'chat' ? 'none' : 'chat')}
-            className={cn(
-              'min-h-11 min-w-11 flex items-center justify-center rounded-lg transition-colors touch-manipulation',
-              mobilePanel === 'chat'
-                ? 'bg-[#ff6b35] text-white'
-                : 'text-white/70 hover:text-white hover:bg-white/10'
-            )}
-          >
-            <MessageSquare className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setMobilePanel(mobilePanel === 'participants' ? 'none' : 'participants')}
-            className={cn(
-              'min-h-11 min-w-11 flex items-center justify-center rounded-lg transition-colors touch-manipulation',
-              mobilePanel === 'participants'
-                ? 'bg-[#ff6b35] text-white'
-                : 'text-white/70 hover:text-white hover:bg-white/10'
-            )}
-          >
-            <Users className="w-5 h-5" />
-          </button>
-          {isHost && (
+        {/* Mobile: only show admin crown for host */}
+        {isHost && (
+          <div className="lg:hidden">
             <button
-              onClick={() => setMobilePanel(mobilePanel === 'admin' ? 'none' : 'admin')}
+              onClick={() => setShowMobileAdmin(!showMobileAdmin)}
               className={cn(
                 'min-h-11 min-w-11 flex items-center justify-center rounded-lg transition-colors touch-manipulation',
-                mobilePanel === 'admin'
+                showMobileAdmin
                   ? 'bg-yellow-500 text-white'
                   : 'text-white/70 hover:text-white hover:bg-white/10'
               )}
             >
               <Crown className="w-5 h-5" />
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </header>
 
       {/* Main content */}
@@ -213,25 +191,13 @@ const WatchPage: React.FC = () => {
           />
         </div>
 
-        {/* Mobile panel: fills remaining space below video, scrolls internally */}
-        {mobilePanel !== 'none' && (
-          <div className="lg:hidden flex-1 min-h-0 overflow-hidden flex flex-col border-t border-white/10">
-            {/* Close bar */}
-            <div className="flex items-center justify-end px-4 py-1.5 border-b border-white/10 flex-shrink-0">
-              <button
-                onClick={() => setMobilePanel('none')}
-                className="min-h-9 min-w-9 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors touch-manipulation"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="flex-1 min-h-0 overflow-hidden">
-              {mobilePanel === 'chat' && <ChatPanel isOpen onClose={() => setMobilePanel('none')} />}
-              {mobilePanel === 'participants' && <RoomInfo isOpen onClose={() => setMobilePanel('none')} />}
-              {mobilePanel === 'admin' && isHost && <AdminPanel />}
-            </div>
-          </div>
-        )}
+        {/* Mobile: chat always visible below video */}
+        <div className="lg:hidden flex-1 min-h-0 overflow-hidden flex flex-col border-t border-white/10">
+          {showMobileAdmin && isHost
+            ? <AdminPanel />
+            : <ChatPanel isOpen />
+          }
+        </div>
 
         {/* Desktop sidebar */}
         <div className="hidden lg:flex">

@@ -317,13 +317,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     if (Hls.isSupported()) {
       const hls = new Hls({
-        manifestLoadingTimeOut: 30_000,
+        manifestLoadingTimeOut: 120_000,
         manifestLoadingMaxRetry: 6,
-        levelLoadingTimeOut: 20_000,
-        fragLoadingTimeOut: 20_000,
-        fragLoadingMaxRetry: 4,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
+        levelLoadingTimeOut: 120_000,
+        fragLoadingTimeOut: 120_000,
+        fragLoadingMaxRetry: 6,
+        maxBufferLength: 60,
+        maxMaxBufferLength: 120,
         startPosition: -1,
         autoStartLoad: true,
         xhrSetup: (xhr: XMLHttpRequest) => {

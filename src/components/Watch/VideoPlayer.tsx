@@ -331,11 +331,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         levelLoadingTimeOut: 120_000,
         fragLoadingTimeOut: 120_000,
         fragLoadingMaxRetry: 6,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
+        // Large forward buffer prevents stalls on network hiccups
+        maxBufferLength: 60,
+        maxMaxBufferLength: 120,
+        // Release old played segments from memory to avoid SourceBuffer quota errors
+        backBufferLength: 30,
         startPosition: -1,
         autoStartLoad: true,
-        enableWorker: true,
         xhrSetup: (xhr: XMLHttpRequest) => {
           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         }

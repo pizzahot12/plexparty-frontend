@@ -94,6 +94,9 @@ function buildHlsUrl(
     SegmentContainer: 'ts',
     MinSegments: '1',
     BreakOnNonKeyFrames: 'true',
+    RequireAvc: 'false',
+    RequireNonAnamorphic: 'false',
+    TranscodeReasons: 'VideoCodecNotSupported,AudioCodecNotSupported,VideoResolutionNotSupported',
   };
 
   // Quality cap (0 = Auto, let Jellyfin handle it)
